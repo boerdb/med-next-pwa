@@ -75,7 +75,7 @@ export default function TodayPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
+    <div className="max-w-lg mx-auto px-4 pb-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>

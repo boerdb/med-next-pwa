@@ -54,7 +54,7 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         <ThemeProvider>
-          <main className="pb-20 min-h-screen">
+          <main className="safe-top pb-20 min-h-screen">
             {children}
           </main>
           <BottomNav />

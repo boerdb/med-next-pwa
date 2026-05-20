@@ -328,7 +328,7 @@ export default function ManagePage() {
   const [showAdd, setShowAdd] = useState(false);
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
+    <div className="max-w-lg mx-auto px-4 pb-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Beheer</h1>

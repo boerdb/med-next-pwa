@@ -40,9 +40,17 @@ body {
   overscroll-behavior: none;
 }
 
-/* Safe area support for notch/home bar */
+/* Safe area support for notch/status bar/home bar */
+.safe-top {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 1.5rem);
+}
+
 .safe-bottom {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+.safe-top-offset {
+  top: calc(env(safe-area-inset-top, 0px) + 1rem);
 }
 
 /* PWA banner animations */

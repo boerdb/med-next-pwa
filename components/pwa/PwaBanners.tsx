@@ -108,7 +108,7 @@ export function UpdateBanner() {
   if (!show) return null;
 
   return (
-    <div className="fixed top-4 inset-x-3 z-50 max-w-sm mx-auto">
+    <div className="fixed safe-top-offset inset-x-3 z-50 max-w-sm mx-auto">
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-4 flex gap-3 items-center animate-slide-down">
         <div className="flex-shrink-0 w-9 h-9 bg-teal-100 dark:bg-teal-900 rounded-xl flex items-center justify-center">
           <RefreshCw className="w-4 h-4 text-teal-600 dark:text-teal-400" />

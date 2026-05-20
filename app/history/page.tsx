@@ -298,7 +298,7 @@ export default function HistoryPage() {
   const adherencePct = totalExpected > 0 ? Math.round((totalTaken / totalExpected) * 100) : null;
 
   return (
-    <div className="max-w-lg mx-auto px-4 pt-6 pb-4">
+    <div className="max-w-lg mx-auto px-4 pb-4">
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Geschiedenis</h1>
         {adherencePct !== null && (
