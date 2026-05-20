@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { db } from '@/lib/db/instant';
 import { useInstantData } from '@/hooks/useInstantData';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
@@ -10,7 +10,7 @@ import { MedicationCard } from '@/components/today/MedicationCard';
 import { LoginDialog } from '@/components/auth/LoginDialog';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Bell, BellOff, Loader2, LogOut, User } from 'lucide-react';
-import { toLocalDateKey } from '@/lib/utils';
+import { sortMedicationsBySchedule, toLocalDateKey } from '@/lib/utils';
 import type { Status } from '@/lib/db/types';
 
 async function playTone(durationMs = 130, frequency = 880, volume = 0.12) {
@@ -50,6 +50,7 @@ export default function TodayPage() {
   }, [isLoading, user]);
 
   const todayLogs = logs.filter((l) => l.dateKey === todayKey);
+  const medicationsSorted = useMemo(() => sortMedicationsBySchedule(medications), [medications]);
   const totalDoses = medications.reduce((sum, m) => sum + m.times.length, 0);
   const takenToday = todayLogs.filter((l) => l.status === 'taken').length;
 
@@ -131,14 +132,14 @@ export default function TodayPage() {
       )}
 
       {/* Medication cards */}
-      {medications.length === 0 ? (
+      {medicationsSorted.length === 0 ? (
         <div className="text-center py-16 text-slate-400 dark:text-slate-500">
           <p className="text-lg font-medium">Geen medicijnen</p>
           <p className="text-sm mt-1">Voeg medicijnen toe via het tabblad Beheer</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {medications.map((med) => (
+          {medicationsSorted.map((med) => (
             <MedicationCard
               key={med.id}
               medication={med}

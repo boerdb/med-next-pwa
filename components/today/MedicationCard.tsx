@@ -1,8 +1,9 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Check, Clock, AlertTriangle } from 'lucide-react';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
-import { cn } from '@/lib/utils';
+import { cn, compareTimeHHMM } from '@/lib/utils';
 import type { Medication, LogEntry, Status } from '@/lib/db/types';
 
 interface MedicationCardProps {
@@ -13,12 +14,17 @@ interface MedicationCardProps {
 }
 
 export function MedicationCard({ medication, todayKey, logs, onLog }: MedicationCardProps) {
+  const timesSorted = useMemo(
+    () => [...medication.times].sort(compareTimeHHMM),
+    [medication.times],
+  );
+
   const isLowStock =
     medication.stockCount !== null &&
     medication.stockCount !== undefined &&
     medication.stockCount <= 7;
 
-  const allDone = medication.times.every((time) =>
+  const allDone = timesSorted.every((time) =>
     logs.some(
       (l) =>
         l.medicationId === medication.id &&
@@ -63,7 +69,7 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
 
       {/* Time slots */}
       <div className="px-4 pb-4 space-y-2">
-        {medication.times.map((time) => {
+        {timesSorted.map((time) => {
           const log = logs.find(
             (l) =>
               l.medicationId === medication.id &&

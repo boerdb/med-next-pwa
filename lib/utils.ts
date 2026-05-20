@@ -40,3 +40,24 @@ export function normalizeMedication<T extends { stockCount?: number | null | str
 export function cn(...classes: (string | undefined | null | false)[]): string {
   return classes.filter(Boolean).join(' ');
 }
+
+/** Compare "HH:MM" schedule strings for chronological sort. */
+export function compareTimeHHMM(a: string, b: string): number {
+  const pa = a.split(':').map(Number);
+  const pb = b.split(':').map(Number);
+  const ma = (pa[0] ?? 0) * 60 + (pa[1] ?? 0);
+  const mb = (pb[0] ?? 0) * 60 + (pb[1] ?? 0);
+  return ma - mb;
+}
+
+/** Earliest dose time for a medication, or end-of-day if none (sorts last). */
+export function earliestMedicationTime(times: string[]): string {
+  if (!times.length) return '99:99';
+  return [...times].sort(compareTimeHHMM)[0]!;
+}
+
+export function sortMedicationsBySchedule<T extends { times: string[] }>(items: T[]): T[] {
+  return [...items].sort((a, b) =>
+    compareTimeHHMM(earliestMedicationTime(a.times), earliestMedicationTime(b.times)),
+  );
+}

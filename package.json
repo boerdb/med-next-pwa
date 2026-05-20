@@ -9,7 +9,8 @@
     "lint": "eslint",
     "instant:push:schema": "npx instant-cli@latest push schema --app c470e575-d873-4a58-830b-8830949f9597",
     "instant:push:perms": "npx instant-cli@latest push perms --app c470e575-d873-4a58-830b-8830949f9597",
-    "instant:push": "npm run instant:push:schema && npm run instant:push:perms"
+    "instant:push": "npm run instant:push:schema && npm run instant:push:perms",
+    "icons:generate": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
     "@instantdb/react": "^1.0.38",
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "sharp": "^0.34.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
