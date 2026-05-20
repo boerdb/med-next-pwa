@@ -42,7 +42,7 @@ export function ScheduleSlotActions({
           className="flex items-center gap-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-500 active:scale-95 text-slate-600 dark:text-slate-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-all"
         >
           <X className="w-3.5 h-3.5" />
-          Slaan over
+          Sla over
         </button>
       </div>
     );
