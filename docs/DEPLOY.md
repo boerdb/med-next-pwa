@@ -23,7 +23,14 @@ FLUSH PRIVILEGES;
 
 ## 2. Omgevingsvariabelen
 
-Kopieer [`.env.example`](../.env.example) naar `/var/www/med-track-pwa/.env.local`:
+Op de server staat ook `.env.example` als sjabloon. Kopieer naar `.env.local` en vul wachtwoorden in:
+
+```bash
+cp /var/www/med-track-pwa/.env.example /var/www/med-track-pwa/.env.local
+nano /var/www/med-track-pwa/.env.local
+```
+
+Of lokaal: kopieer [`.env.example`](../.env.example) naar `/var/www/med-track-pwa/.env.local`:
 
 ```env
 DATABASE_URL=mysql://medtracker:sterk-wachtwoord@127.0.0.1:3306/medtracker
