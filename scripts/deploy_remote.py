@@ -163,12 +163,8 @@ FLUSH PRIVILEGES;
     run(ssh, f"cd {REMOTE_DIR} && npm run build", timeout=600)
 
     run(ssh, "npm install -g pm2", check=False)
-    run(ssh, "pm2 delete med-track-pwa 2>/dev/null; true", check=False)
-    run(ssh, "pm2 delete med-next-pwa 2>/dev/null; true", check=False)
-    run(
-        ssh,
-        f"cd {REMOTE_DIR} && pm2 start npm --name med-track-pwa -- start && pm2 save",
-    )
+    run(ssh, "pm2 delete med-next-pwa 2>/dev/null; pm2 delete med-track-pwa 2>/dev/null; true", check=False)
+    run(ssh, f"cd {REMOTE_DIR} && pm2 start ecosystem.config.cjs && pm2 save")
     run(ssh, "pm2 startup systemd -u root --hp /root 2>/dev/null | grep -v PM2 | bash", check=False)
 
     _, out, _ = run(ssh, "pm2 list", check=False)

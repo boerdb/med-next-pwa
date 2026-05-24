@@ -26,7 +26,7 @@ run(
 )
 run(f"cd {REMOTE} && npm run build")
 run("ss -tlnp | grep node | head -15")
-run(f"pm2 delete med-track-pwa 2>/dev/null; cd {REMOTE} && PORT=3010 pm2 start npm --name med-track-pwa -- start")
+run(f"pm2 delete med-next-pwa 2>/dev/null; pm2 delete med-track-pwa 2>/dev/null; cd {REMOTE} && pm2 start ecosystem.config.cjs")
 run("pm2 save")
 run("sleep 2 && curl -s http://127.0.0.1:3010/api/auth/me")
 ssh.close()

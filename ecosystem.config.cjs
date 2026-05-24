@@ -2,7 +2,7 @@
 module.exports = {
   apps: [
     {
-      name: 'med-track-pwa',
+      name: 'med-next-pwa',
       cwd: '/var/www/med-next-pwa',
       script: 'npm',
       args: 'start',

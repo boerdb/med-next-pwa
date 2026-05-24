@@ -28,11 +28,11 @@ with ssh.open_sftp().file(f"{REMOTE}/.env.local", "w") as f:
     f.write(env)
 
 for c in [
-    f"cd {REMOTE} && pm2 delete med-track-pwa 2>/dev/null; true",
+    f"cd {REMOTE} && pm2 delete med-next-pwa 2>/dev/null; pm2 delete med-track-pwa 2>/dev/null; true",
     f"cd {REMOTE} && pm2 start ecosystem.config.cjs",
     "pm2 save",
     f"sleep 4 && curl -s http://127.0.0.1:{PORT}/api/auth/me",
-    f"pm2 logs med-track-pwa --lines 5 --nostream 2>&1 | tail -12",
+    f"pm2 logs med-next-pwa --lines 5 --nostream 2>&1 | tail -12",
 ]:
     print("$", c)
     _, o, _ = ssh.exec_command(c, timeout=90)

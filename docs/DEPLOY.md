@@ -7,7 +7,7 @@
 - **Cloudflare Tunnel** op NEXT → `http://127.0.0.1:3007` (niet 3000; die poort is bezet)
 
 ```
-Telefoon → HTTPS (subdomein) → Cloudflare Tunnel → Next.js :3000 → MySQL :3306 (localhost)
+Telefoon → HTTPS (subdomein) → Cloudflare Tunnel → Next.js :3007 → MySQL op 192.168.1.14
 ```
 
 ## 1. MySQL (phpMyAdmin als root)
@@ -25,19 +25,19 @@ FLUSH PRIVILEGES;
 
 Op de server staan twee sjablonen (zelfde inhoud):
 
-- `/var/www/med-track-pwa/.env.example` — standaard (verborgen in sommige bestandsbeheerders)
-- `/var/www/med-track-pwa/env.example` — zichtbare kopie zonder leading dot
+- `/var/www/med-next-pwa/.env.example` — standaard (verborgen in sommige bestandsbeheerders)
+- `/var/www/med-next-pwa/env.example` — zichtbare kopie zonder leading dot
 
-In SSH: `ls -la /var/www/med-track-pwa/.env*`
+In SSH: `ls -la /var/www/med-next-pwa/.env*`
 
 Kopieer naar `.env.local` en vul wachtwoorden in:
 
 ```bash
-cp /var/www/med-track-pwa/.env.example /var/www/med-track-pwa/.env.local
-nano /var/www/med-track-pwa/.env.local
+cp /var/www/med-next-pwa/.env.example /var/www/med-next-pwa/.env.local
+nano /var/www/med-next-pwa/.env.local
 ```
 
-Of lokaal: kopieer [`.env.example`](../.env.example) naar `/var/www/med-track-pwa/.env.local`:
+Of lokaal: kopieer [`.env.example`](../.env.example) naar `/var/www/med-next-pwa/.env.local`:
 
 ```env
 DATABASE_URL=mysql://medtracker:sterk-wachtwoord@127.0.0.1:3306/medtracker
@@ -48,7 +48,7 @@ NODE_ENV=production
 ## 3. Build en start
 
 ```bash
-cd /var/www/med-track-pwa
+cd /var/www/med-next-pwa
 npm ci
 npm run build
 npm run start
@@ -65,8 +65,8 @@ After=network.target mysql.service
 
 [Service]
 Type=simple
-WorkingDirectory=/var/www/med-track-pwa
-EnvironmentFile=/var/www/med-track-pwa/.env.local
+WorkingDirectory=/var/www/med-next-pwa
+EnvironmentFile=/var/www/med-next-pwa/.env.local
 ExecStart=/usr/bin/npm run start
 Restart=on-failure
 
@@ -76,14 +76,14 @@ WantedBy=multi-user.target
 
 ## 4. Cloudflare Tunnel
 
-De app luistert op **poort 3000** (`pm2`, proces `med-track-pwa`).
+De app luistert op **poort 3007** (`pm2`, proces `med-next-pwa` — zelfde naam als de map).
 
 In `config.yml` (pad kan verschillen):
 
 ```yaml
 ingress:
   - hostname: medtracker.jouwdomein.nl
-    service: http://127.0.0.1:3000
+    service: http://127.0.0.1:3007
   - service: http_status:404
 ```
 

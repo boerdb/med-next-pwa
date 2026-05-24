@@ -19,10 +19,10 @@ if "hasport" not in o.read().decode():
     ssh.exec_command(f"echo 'PORT=3010' >> {REMOTE}/.env.local")
 
 cmds = [
-    f"cd {REMOTE} && pm2 delete med-track-pwa 2>/dev/null; true",
+    f"cd {REMOTE} && pm2 delete med-next-pwa 2>/dev/null; pm2 delete med-track-pwa 2>/dev/null; true",
     f"cd {REMOTE} && pm2 start ecosystem.config.cjs",
     "pm2 save",
-    "sleep 3 && pm2 logs med-track-pwa --lines 8 --nostream",
+    "sleep 3 && pm2 logs med-next-pwa --lines 8 --nostream",
     "curl -s http://127.0.0.1:3010/api/auth/me",
 ]
 for c in cmds:
