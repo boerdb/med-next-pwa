@@ -136,12 +136,8 @@ crontab -e
 2. Klik **Aanmelden** → **Registreren** (geen gastmodus).
 3. E-mail + wachtwoord (min. 8 tekens).
 
-## 7. Data uit InstantDB
-
-Zie [`scripts/migrate-instant-to-mysql.mjs`](../scripts/migrate-instant-to-mysql.mjs) en een handmatige JSON-export uit het Instant-dashboard.
-
 ## Beveiliging
 
 - Gebruik **nooit** `root` in `DATABASE_URL`.
 - Houd `.env.local` buiten git.
-- Wijzig standaardwachtwoorden na import.
+- Wijzig standaardwachtwoorden na installatie.

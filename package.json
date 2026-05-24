@@ -7,8 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "icons:generate": "node scripts/generate-pwa-icons.mjs",
-    "db:migrate": "node scripts/migrate-instant-to-mysql.mjs"
+    "icons:generate": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

@@ -37,7 +37,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET, cross-origin, InstantDB, etc.
+  // Skip non-GET and cross-origin requests.
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith('/api/')) return;
   if (url.pathname === '/medtracker-sw-bundle.json') return; // handled by app
