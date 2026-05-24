@@ -23,7 +23,14 @@ FLUSH PRIVILEGES;
 
 ## 2. Omgevingsvariabelen
 
-Op de server staat ook `.env.example` als sjabloon. Kopieer naar `.env.local` en vul wachtwoorden in:
+Op de server staan twee sjablonen (zelfde inhoud):
+
+- `/var/www/med-track-pwa/.env.example` — standaard (verborgen in sommige bestandsbeheerders)
+- `/var/www/med-track-pwa/env.example` — zichtbare kopie zonder leading dot
+
+In SSH: `ls -la /var/www/med-track-pwa/.env*`
+
+Kopieer naar `.env.local` en vul wachtwoorden in:
 
 ```bash
 cp /var/www/med-track-pwa/.env.example /var/www/med-track-pwa/.env.local

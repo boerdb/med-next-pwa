@@ -18,9 +18,11 @@ def main() -> None:
 
     example = PROJECT / ".env.example"
     sftp.put(str(example), f"{REMOTE_DIR}/.env.example")
-    print(f"Uploaded {example.name} -> {REMOTE_DIR}/.env.example")
+    # Zonder leading dot — zichtbaar in FTP/phpMyAdmin file managers
+    sftp.put(str(example), f"{REMOTE_DIR}/env.example")
+    print(f"Uploaded -> {REMOTE_DIR}/.env.example")
+    print(f"Uploaded -> {REMOTE_DIR}/env.example (zelfde inhoud, zichtbaar in verkenner)")
 
-    # Create .env.local only if missing (do not overwrite existing secrets)
     _, stdout, _ = ssh.exec_command(f"test -f {REMOTE_DIR}/.env.local && echo exists")
     exists = "exists" in stdout.read().decode()
     if not exists:
@@ -35,6 +37,7 @@ NODE_ENV=production
     else:
         print(f"{REMOTE_DIR}/.env.local already exists (left unchanged)")
 
+    ssh.exec_command(f"chmod 644 {REMOTE_DIR}/.env.example {REMOTE_DIR}/env.example")
     sftp.close()
     ssh.close()
     print("Done.")
