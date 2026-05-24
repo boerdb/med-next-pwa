@@ -1,4 +1,4 @@
-import { db } from './instant';
+import { notifyDataChanged } from './refresh';
 import type { LogEntry, Medication } from './types';
 
 type MedicationFields = Pick<Medication, 'name' | 'times'> & {
@@ -6,31 +6,47 @@ type MedicationFields = Pick<Medication, 'name' | 'times'> & {
 };
 type LogEntryFields = Omit<LogEntry, 'id'>;
 
-/** Upsert medication and link to owner (required for InstantDB owner permissions). */
+async function apiFetch(path: string, init?: RequestInit): Promise<void> {
+  const res = await fetch(path, {
+    ...init,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...init?.headers,
+    },
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error ?? 'Opslaan mislukt.');
+  }
+  notifyDataChanged();
+}
+
 export async function upsertMedication(
-  ownerId: string,
   id: string,
   fields: MedicationFields,
 ): Promise<void> {
-  const { stockCount, ...rest } = fields;
-  await db.transact([
-    db.tx.medications[id].update({ ...rest, stockCount: stockCount ?? null }),
-    db.tx.medications[id].link({ owner: ownerId }),
-  ]);
+  await apiFetch('/api/medications', {
+    method: 'POST',
+    body: JSON.stringify({ id, ...fields }),
+  });
 }
 
-/** Upsert log entry and link to owner (required for InstantDB owner permissions). */
 export async function upsertLogEntry(
-  ownerId: string,
   id: string,
   fields: LogEntryFields,
 ): Promise<void> {
-  await db.transact([
-    db.tx.logEntries[id].update(fields),
-    db.tx.logEntries[id].link({ owner: ownerId }),
-  ]);
+  await apiFetch('/api/log-entries', {
+    method: 'POST',
+    body: JSON.stringify({ id, ...fields }),
+  });
 }
 
 export async function deleteMedication(id: string): Promise<void> {
-  await db.transact(db.tx.medications[id].delete());
+  await apiFetch(`/api/medications/${id}`, { method: 'DELETE' });
+}
+
+export async function signOut(): Promise<void> {
+  await apiFetch('/api/auth/logout', { method: 'POST' });
+  notifyDataChanged();
 }

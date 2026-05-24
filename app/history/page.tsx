@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useInstantData } from '@/hooks/useInstantData';
+import { useAppData } from '@/hooks/useAppData';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
 import { LoginDialog } from '@/components/auth/LoginDialog';
@@ -137,7 +137,7 @@ function DayHeaderContent({
         )}
         {group.isComplete && (
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
-            {group.allTaken ? '✓' : 'Volledig'}
+            {group.allTaken ? '✓' : 'Onvolledig'}
           </span>
         )}
       </div>
@@ -261,7 +261,7 @@ function DayRow({
 }
 
 export default function HistoryPage() {
-  const { medications, logs, isLoading, user } = useInstantData();
+  const { medications, logs, isLoading, user } = useAppData();
   const [showLogin, setShowLogin] = useState(false);
   const { handleLog: logForDate, logError } = useMedicationLog(logs, user?.id);
   const todayKey = toLocalDateKey();

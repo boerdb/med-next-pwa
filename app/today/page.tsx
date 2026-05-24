@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { db } from '@/lib/db/instant';
-import { useInstantData } from '@/hooks/useInstantData';
+import { useAppData } from '@/hooks/useAppData';
+import { signOut } from '@/lib/db/transact';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
 import { useNotifications } from '@/hooks/useNotifications';
 import { DailyProgress } from '@/components/today/DailyProgress';
@@ -34,7 +34,7 @@ async function playTone(durationMs = 130, frequency = 880, volume = 0.12) {
 }
 
 export default function TodayPage() {
-  const { isLoading, error, medications, logs, user } = useInstantData();
+  const { isLoading, error, medications, logs, user } = useAppData();
   const { enabled: notifEnabled, toggle: toggleNotif } = useNotifications(medications, logs);
   const [showLogin, setShowLogin] = useState(false);
   const todayKey = toLocalDateKey();
@@ -99,7 +99,7 @@ export default function TodayPage() {
           </button>
           {user ? (
             <button
-              onClick={() => db.auth.signOut()}
+              onClick={() => void signOut()}
               className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
               title="Afmelden"
             >

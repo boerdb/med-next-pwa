@@ -27,7 +27,7 @@ export function useMedicationLog(logs: LogEntry[], userId: string | undefined) {
       const id = existing?.id ?? uid();
 
       try {
-        await upsertLogEntry(userId, id, {
+        await upsertLogEntry(id, {
           medicationId,
           medicationName,
           dateKey,

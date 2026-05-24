@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useInstantData } from '@/hooks/useInstantData';
+import { useAppData } from '@/hooks/useAppData';
 import { upsertMedication, deleteMedication } from '@/lib/db/transact';
 import { uid } from '@/lib/utils';
 import {
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import type { Medication } from '@/lib/db/types';
 
-function AddMedicationForm({ ownerId, onDone }: { ownerId: string; onDone: () => void }) {
+function AddMedicationForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
   const [times, setTimes] = useState<string[]>([]);
   const [newTime, setNewTime] = useState('');
@@ -39,7 +39,7 @@ function AddMedicationForm({ ownerId, onDone }: { ownerId: string; onDone: () =>
       const stockCount = stock.trim() && Number.isFinite(parsedStock) && parsedStock >= 0
         ? Math.floor(parsedStock) : null;
       const id = uid();
-      await upsertMedication(ownerId, id, { name: name.trim(), times, stockCount });
+      await upsertMedication(id, { name: name.trim(), times, stockCount });
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Opslaan mislukt.');
@@ -149,11 +149,9 @@ function AddMedicationForm({ ownerId, onDone }: { ownerId: string; onDone: () =>
 }
 
 function EditMedicationCard({
-  ownerId,
   medication,
   onDone,
 }: {
-  ownerId: string;
   medication: Medication;
   onDone: () => void;
 }) {
@@ -179,7 +177,7 @@ function EditMedicationCard({
       const parsedStock = Number(stock.trim());
       const stockCount = stock.trim() && Number.isFinite(parsedStock) && parsedStock >= 0
         ? Math.floor(parsedStock) : null;
-      await upsertMedication(ownerId, medication.id, { name: name.trim(), times, stockCount });
+      await upsertMedication(medication.id, { name: name.trim(), times, stockCount });
       onDone();
     } finally {
       setBusy(false);
@@ -266,12 +264,18 @@ function EditMedicationCard({
   );
 }
 
-function MedicationListCard({ ownerId, medication }: { ownerId?: string; medication: Medication }) {
+function MedicationListCard({
+  canEdit,
+  medication,
+}: {
+  canEdit: boolean;
+  medication: Medication;
+}) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
-  if (editing && ownerId) {
-    return <EditMedicationCard ownerId={ownerId} medication={medication} onDone={() => setEditing(false)} />;
+  if (editing && canEdit) {
+    return <EditMedicationCard medication={medication} onDone={() => setEditing(false)} />;
   }
 
   const daysLeft = medication.stockCount !== null && medication.times.length > 0
@@ -306,7 +310,7 @@ function MedicationListCard({ ownerId, medication }: { ownerId?: string; medicat
       </div>
       {expanded && (
         <div className="px-4 pb-3 border-t border-slate-100 dark:border-slate-700 pt-3">
-          {ownerId ? (
+          {canEdit ? (
             <button
               onClick={() => setEditing(true)}
               className="flex items-center gap-1.5 text-sm font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors"
@@ -323,8 +327,8 @@ function MedicationListCard({ ownerId, medication }: { ownerId?: string; medicat
 }
 
 export default function ManagePage() {
-  const { medications, user } = useInstantData();
-  const ownerId = user?.id;
+  const { medications, user } = useAppData();
+  const canEdit = Boolean(user?.id);
   const [showAdd, setShowAdd] = useState(false);
 
   return (
@@ -343,12 +347,12 @@ export default function ManagePage() {
       </div>
 
       {/* Add form */}
-      {showAdd && ownerId && (
+      {showAdd && canEdit && (
         <div className="mb-4">
-          <AddMedicationForm ownerId={ownerId} onDone={() => setShowAdd(false)} />
+          <AddMedicationForm onDone={() => setShowAdd(false)} />
         </div>
       )}
-      {showAdd && !ownerId && (
+      {showAdd && !canEdit && (
         <p className="mb-4 text-sm text-amber-600 dark:text-amber-400 px-3 py-2 bg-amber-50 dark:bg-amber-900/30 rounded-xl">
           Meld je aan om medicijnen toe te voegen.
         </p>
@@ -363,7 +367,7 @@ export default function ManagePage() {
       ) : (
         <div className="space-y-2 mb-6">
           {medications.map((med) => (
-            <MedicationListCard key={med.id} ownerId={ownerId} medication={med} />
+            <MedicationListCard key={med.id} canEdit={canEdit} medication={med} />
           ))}
         </div>
       )}
