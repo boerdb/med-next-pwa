@@ -5,7 +5,7 @@ from pathlib import Path
 
 import paramiko
 
-from deploy_remote import HOST, PASSWORD, REMOTE_DIR, USER
+from deploy_remote import DB_HOST, HOST, PASSWORD, REMOTE_DIR, USER
 
 PROJECT = Path(__file__).resolve().parent.parent
 
@@ -27,7 +27,7 @@ def main() -> None:
     exists = "exists" in stdout.read().decode()
     if not exists:
         secret = secrets.token_urlsafe(32)
-        local = f"""DATABASE_URL=mysql://medtracker:kerkpoort@127.0.0.1:3306/medtracker
+        local = f"""DATABASE_URL=mysql://medtracker:kerkpoort@{DB_HOST}:3306/medtracker
 SESSION_SECRET={secret}
 NODE_ENV=production
 """

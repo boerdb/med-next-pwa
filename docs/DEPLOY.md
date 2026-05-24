@@ -2,9 +2,9 @@
 
 ## Architectuur
 
-- **Next.js** en **MySQL** op dezelfde machine (`/var/www/med-track-pwa`)
-- MySQL alleen via `127.0.0.1` (niet open op internet)
-- **Cloudflare Tunnel** exposeert het subdomein met HTTPS naar `localhost:3000` (of je reverse proxy)
+- **Next.js** op server **NEXT** (`192.168.1.32`) → `/var/www/med-next-pwa` → poort **3007**
+- **MySQL** op server **DB-server** (`192.168.1.14`) → database `medtracker`
+- **Cloudflare Tunnel** op NEXT → `http://127.0.0.1:3007` (niet 3000; die poort is bezet)
 
 ```
 Telefoon → HTTPS (subdomein) → Cloudflare Tunnel → Next.js :3000 → MySQL :3306 (localhost)

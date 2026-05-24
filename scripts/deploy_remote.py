@@ -10,10 +10,12 @@ from pathlib import Path
 
 import paramiko
 
-HOST = os.environ.get("DEPLOY_HOST", "192.168.1.14")
+HOST = os.environ.get("DEPLOY_HOST", "192.168.1.32")
 USER = os.environ.get("DEPLOY_USER", "root")
 PASSWORD = os.environ.get("DEPLOY_PASSWORD", "kerkpoort")
-REMOTE_DIR = os.environ.get("DEPLOY_DIR", "/var/www/med-track-pwa")
+REMOTE_DIR = os.environ.get("DEPLOY_DIR", "/var/www/med-next-pwa")
+# MySQL on DB-server (192.168.1.14)
+DB_HOST = os.environ.get("DB_HOST", "192.168.1.14")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 SKIP_DIRS = {
@@ -80,7 +82,7 @@ def upload_project(sftp: paramiko.SFTPClient, remote_dir: str) -> None:
 
 def main() -> None:
     session_secret = secrets.token_urlsafe(32)
-    env_content = f"""DATABASE_URL=mysql://medtracker:kerkpoort@127.0.0.1:3306/medtracker
+    env_content = f"""DATABASE_URL=mysql://medtracker:kerkpoort@{DB_HOST}:3306/medtracker
 SESSION_SECRET={session_secret}
 NODE_ENV=production
 """
@@ -126,16 +128,20 @@ NODE_ENV=production
         f.write(schema)
     sftp.close()
 
-    run(ssh, "mysql -u root -pkerkpoort < /tmp/medtracker-schema.sql 2>/dev/null || mysql -uroot -pkerkpoort < /tmp/medtracker-schema.sql")
-    run(
-        ssh,
-        """mysql -uroot -pkerkpoort -e "
+    # Schema/users only on DB server when Next and MySQL are split
+    if HOST == DB_HOST or DB_HOST in ("127.0.0.1", "localhost"):
+        run(ssh, "mysql -u root -pkerkpoort < /tmp/medtracker-schema.sql 2>/dev/null || mysql -uroot -pkerkpoort < /tmp/medtracker-schema.sql")
+        run(
+            ssh,
+            """mysql -uroot -pkerkpoort -e "
 CREATE USER IF NOT EXISTS 'medtracker'@'localhost' IDENTIFIED BY 'kerkpoort';
 GRANT SELECT, INSERT, UPDATE, DELETE ON medtracker.* TO 'medtracker'@'localhost';
 FLUSH PRIVILEGES;
 " """,
-        check=False,
-    )
+            check=False,
+        )
+    else:
+        print(f"Skipping MySQL schema on {HOST} (database on {DB_HOST})")
 
     # .env.local
     run(
