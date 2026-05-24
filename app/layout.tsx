@@ -5,6 +5,7 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { InstallBanner, UpdateBanner } from '@/components/pwa/PwaBanners';
 import { ServiceWorkerRegistrar } from '@/components/pwa/ServiceWorkerRegistrar';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
+import { AuthProvider } from '@/components/auth/AuthProvider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -54,9 +55,11 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         <ThemeProvider>
-          <main className="safe-top pb-20 min-h-screen">
-            {children}
-          </main>
+          <AuthProvider>
+            <main className="safe-top pb-20 min-h-screen">
+              {children}
+            </main>
+          </AuthProvider>
           <BottomNav />
           <ServiceWorkerRegistrar />
           <UpdateBanner />

@@ -3,33 +3,30 @@
 import { useState } from 'react';
 import { useAppData } from '@/hooks/useAppData';
 import { upsertMedication, deleteMedication } from '@/lib/db/transact';
+import { medicationDaysLeft } from '@/lib/stock';
 import { uid } from '@/lib/utils';
 import {
   Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronUp,
-  Loader2, Clock,
+  Loader2,
 } from 'lucide-react';
 import type { Medication } from '@/lib/db/types';
+import {
+  MedicationTimesEditor,
+  mergeMedicationTimes,
+} from '@/components/manage/MedicationTimesEditor';
 
 function AddMedicationForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
   const [times, setTimes] = useState<string[]>([]);
-  const [newTime, setNewTime] = useState('');
+  const [pendingTime, setPendingTime] = useState('');
   const [stock, setStock] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const addTime = () => {
-    const t = newTime.trim();
-    if (!t || times.includes(t)) return;
-    setTimes([...times, t].sort());
-    setNewTime('');
-  };
-
-  const removeTime = (t: string) => setTimes(times.filter((x) => x !== t));
-
   const submit = async () => {
-    if (!name.trim() || times.length === 0) {
-      setError('Vul een naam in en voeg minimaal één tijd toe.');
+    const allTimes = mergeMedicationTimes(times, pendingTime);
+    if (!name.trim() || allTimes.length === 0) {
+      setError('Vul een medicijnnaam in en voeg minimaal één innametijd toe (knop Toevoegen of snelkiezen).');
       return;
     }
     setBusy(true);
@@ -39,7 +36,7 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
       const stockCount = stock.trim() && Number.isFinite(parsedStock) && parsedStock >= 0
         ? Math.floor(parsedStock) : null;
       const id = uid();
-      await upsertMedication(id, { name: name.trim(), times, stockCount });
+      await upsertMedication(id, { name: name.trim(), times: allTimes, stockCount });
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Opslaan mislukt.');
@@ -90,46 +87,17 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
-      {/* Times */}
-      <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-          Innaametijden
-        </label>
-        <div className="flex gap-2 mb-2">
-          <div className="relative flex-1">
-            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="time"
-              value={newTime}
-              onChange={(e) => setNewTime(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addTime()}
-              className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-white"
-            />
-          </div>
-          <button
-            onClick={addTime}
-            disabled={!newTime}
-            className="px-3 py-2.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white rounded-xl transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {times.map((t) => (
-            <span key={t} className="inline-flex items-center gap-1 px-3 py-1 bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded-full text-sm font-mono font-medium">
-              {t}
-              <button onClick={() => removeTime(t)} className="hover:text-red-500 transition-colors">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-      </div>
+      <MedicationTimesEditor
+        times={times}
+        onChange={setTimes}
+        onPendingTimeChange={setPendingTime}
+      />
 
       {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
 
       <div className="flex gap-2 pt-1">
         <button
+          type="button"
           onClick={submit}
           disabled={busy}
           className="flex-1 flex items-center justify-center gap-1.5 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
@@ -138,6 +106,7 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
           Opslaan
         </button>
         <button
+          type="button"
           onClick={onDone}
           className="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors text-sm font-semibold"
         >
@@ -157,27 +126,24 @@ function EditMedicationCard({
 }) {
   const [name, setName] = useState(medication.name);
   const [times, setTimes] = useState<string[]>([...medication.times]);
-  const [newTime, setNewTime] = useState('');
+  const [pendingTime, setPendingTime] = useState('');
   const [stock, setStock] = useState(medication.stockCount !== null ? String(medication.stockCount) : '');
   const [busy, setBusy] = useState(false);
-
-  const addTime = () => {
-    const t = newTime.trim();
-    if (!t || times.includes(t)) return;
-    setTimes([...times, t].sort());
-    setNewTime('');
-  };
-
-  const removeTime = (t: string) => setTimes(times.filter((x) => x !== t));
+  const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
-    if (!name.trim() || times.length === 0) return;
+    const allTimes = mergeMedicationTimes(times, pendingTime);
+    if (!name.trim() || allTimes.length === 0) {
+      setError('Vul een naam in en minimaal één innametijd.');
+      return;
+    }
     setBusy(true);
+    setError(null);
     try {
       const parsedStock = Number(stock.trim());
       const stockCount = stock.trim() && Number.isFinite(parsedStock) && parsedStock >= 0
         ? Math.floor(parsedStock) : null;
-      await upsertMedication(medication.id, { name: name.trim(), times, stockCount });
+      await upsertMedication(medication.id, { name: name.trim(), times: allTimes, stockCount });
       onDone();
     } finally {
       setBusy(false);
@@ -222,41 +188,22 @@ function EditMedicationCard({
         ))}
       </div>
 
-      {/* Times */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="time"
-            value={newTime}
-            onChange={(e) => setNewTime(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && addTime()}
-            className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-white"
-          />
-        </div>
-        <button onClick={addTime} disabled={!newTime} className="px-3 py-2 bg-teal-600 hover:bg-teal-500 disabled:opacity-40 text-white rounded-xl transition-colors">
-          <Plus className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {times.map((t) => (
-          <span key={t} className="inline-flex items-center gap-1 px-3 py-1 bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 rounded-full text-sm font-mono">
-            {t}
-            <button onClick={() => removeTime(t)} className="hover:text-red-500 transition-colors">
-              <X className="w-3 h-3" />
-            </button>
-          </span>
-        ))}
-      </div>
+      <MedicationTimesEditor
+        times={times}
+        onChange={setTimes}
+        onPendingTimeChange={setPendingTime}
+      />
+
+      {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
 
       <div className="flex gap-2">
-        <button onClick={save} disabled={busy} className="flex-1 flex items-center justify-center gap-1 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-semibold py-2 rounded-xl transition-colors">
+        <button type="button" onClick={save} disabled={busy} className="flex-1 flex items-center justify-center gap-1 bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white text-sm font-semibold py-2 rounded-xl transition-colors">
           {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Opslaan
         </button>
-        <button onClick={onDone} className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors text-sm">
+        <button type="button" onClick={onDone} className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors text-sm">
           Annuleren
         </button>
-        <button onClick={deleteMed} className="px-3 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-xl transition-colors">
+        <button type="button" onClick={deleteMed} className="px-3 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-xl transition-colors">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
@@ -278,9 +225,7 @@ function MedicationListCard({
     return <EditMedicationCard medication={medication} onDone={() => setEditing(false)} />;
   }
 
-  const daysLeft = medication.stockCount !== null && medication.times.length > 0
-    ? Math.floor(medication.stockCount / medication.times.length)
-    : null;
+  const daysLeft = medicationDaysLeft(medication);
   const isLow = daysLeft !== null && daysLeft <= 7;
 
   return (

@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Check, Clock, AlertTriangle } from 'lucide-react';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
+import { medicationDaysLeft } from '@/lib/stock';
 import { cn, compareTimeHHMM } from '@/lib/utils';
 import type { Medication, LogEntry, Status } from '@/lib/db/types';
 
@@ -19,10 +20,8 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
     [medication.times],
   );
 
-  const isLowStock =
-    medication.stockCount !== null &&
-    medication.stockCount !== undefined &&
-    medication.stockCount <= 7;
+  const daysLeft = medicationDaysLeft(medication);
+  const isLowStock = daysLeft !== null && daysLeft <= 7;
 
   const allDone = timesSorted.every((time) =>
     logs.some(
@@ -51,13 +50,13 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
           {isLowStock && (
             <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">
               <AlertTriangle className="w-2.5 h-2.5" />
-              Nog {medication.stockCount} dag{medication.stockCount === 1 ? '' : 'en'} voorraad
+              Nog {daysLeft} dag{daysLeft === 1 ? '' : 'en'} voorraad
             </span>
           )}
         </div>
-        {medication.stockCount !== null && medication.stockCount !== undefined && !isLowStock && (
+        {daysLeft !== null && !isLowStock && (
           <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 flex-shrink-0">
-            {medication.stockCount}d voorraad
+            {daysLeft}d voorraad
           </span>
         )}
         {allDone && (

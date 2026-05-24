@@ -1,7 +1,9 @@
 // MedTracker Service Worker
 // Handles: caching, background sync, push notifications, update signalling
 
-const CACHE_VERSION = 'medtracker-v2';
+importScripts('/push-handler.js');
+
+const CACHE_VERSION = 'medtracker-v3';
 const STATIC_ASSETS = [
   '/',
   '/today',
@@ -83,33 +85,7 @@ self.addEventListener('periodicsync', (event) => {
   }
 });
 
-// ─── Push notifications ────────────────────────────────────────────────────
-self.addEventListener('push', (event) => {
-  let data = { title: 'MedTracker', body: 'Tijd voor uw medicijnen!' };
-  try { if (event.data) data = event.data.json(); } catch { /* noop */ }
-
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-192x192.png',
-    }),
-  );
-});
-
-// ─── Notification click ────────────────────────────────────────────────────
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-      const existing = clients.find((c) => c.url.includes(self.location.origin));
-      if (existing) return existing.focus();
-      return self.clients.openWindow('/today');
-    }),
-  );
-});
-
-// ─── Reminder check helper ─────────────────────────────────────────────────
+// ─── Reminder check helper (periodic sync fallback, Android/desktop) ───────
 async function checkReminders() {
   try {
     const cache = await caches.open('medtracker-data-v1');

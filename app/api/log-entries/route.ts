@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { getPool } from '@/lib/db/mysql';
 import { rowToLogEntry } from '@/lib/db/rows';
 import { requireSession, jsonError, jsonOk } from '@/lib/api/http';
+import { stockDeltaForStatusChange } from '@/lib/stock';
 import type { RowDataPacket, ResultSetHeader } from 'mysql2';
 
 type LogRow = RowDataPacket & {
@@ -71,6 +72,15 @@ export async function POST(req: NextRequest) {
     }
 
     const pool = getPool();
+
+    const [slotRows] = await pool.query<RowDataPacket[]>(
+      `SELECT status FROM log_entries
+       WHERE user_id = ? AND medication_id = ? AND date_key = ? AND time = ?
+       LIMIT 1`,
+      [session.userId, medicationId, dateKey, time],
+    );
+    const previousStatus = slotRows[0]?.status as 'taken' | 'skipped' | undefined;
+
     const [existing] = await pool.query<RowDataPacket[]>(
       'SELECT user_id FROM log_entries WHERE id = ? LIMIT 1',
       [id],
@@ -122,6 +132,16 @@ export async function POST(req: NextRequest) {
           throw err;
         }
       }
+    }
+
+    const stockDelta = stockDeltaForStatusChange(previousStatus, status);
+    if (stockDelta !== 0) {
+      await pool.query(
+        `UPDATE medications
+         SET stock_count = GREATEST(0, stock_count + ?)
+         WHERE id = ? AND user_id = ? AND stock_count IS NOT NULL`,
+        [stockDelta, medicationId, session.userId],
+      );
     }
 
     return jsonOk({ ok: true });

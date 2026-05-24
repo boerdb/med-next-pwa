@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAppData } from '@/hooks/useAppData';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
-import { LoginDialog } from '@/components/auth/LoginDialog';
 import { toLocalDateKey, parseDateKey } from '@/lib/utils';
 import { Check, Minus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import type { LogEntry, Medication, HistoryDayGroup, Status } from '@/lib/db/types';
@@ -262,7 +261,6 @@ function DayRow({
 
 export default function HistoryPage() {
   const { medications, logs, isLoading, user } = useAppData();
-  const [showLogin, setShowLogin] = useState(false);
   const { handleLog: logForDate, logError } = useMedicationLog(logs, user?.id);
   const todayKey = toLocalDateKey();
 
@@ -274,10 +272,7 @@ export default function HistoryPage() {
       time: string,
       status: Status,
     ) => {
-      if (!user?.id) {
-        setShowLogin(true);
-        return;
-      }
+      if (!user?.id) return;
       await logForDate(dateKey, medicationId, medicationName, time, status);
     },
     [logForDate, user?.id],
@@ -356,7 +351,6 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {showLogin && <LoginDialog onClose={() => setShowLogin(false)} />}
     </div>
   );
 }

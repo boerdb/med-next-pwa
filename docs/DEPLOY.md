@@ -98,13 +98,44 @@ python scripts/deploy_pm2.py
 
 Zorg dat in Cloudflare **SSL/TLS** op *Full* staat als je lokaal geen TLS hebt; de tunnel regelt HTTPS naar de gebruiker.
 
-## 5. Eerste account
+## 5. Push-meldingen (ook als de app dicht is)
+
+1. Voer op MySQL [`sql/push-tables.sql`](../sql/push-tables.sql) uit (of opnieuw `schema.sql` op een lege DB).
+2. Genereer VAPID-sleutels op de server:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+3. Zet in `.env.local`:
+
+```env
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=<public>
+VAPID_PRIVATE_KEY=<private>
+VAPID_SUBJECT=mailto:med@clvs.nl
+CRON_SECRET=<openssl rand -hex 32>
+```
+
+4. Herbouw en herstart PM2 (`npm run build`, `pm2 restart med-next-pwa`).
+5. Cron op **NEXT** (elke minuut):
+
+```bash
+crontab -e
+```
+
+```cron
+* * * * * curl -fsS -H "Authorization: Bearer JOUW_CRON_SECRET" "http://127.0.0.1:3007/api/cron/check-reminders" >/dev/null
+```
+
+6. In de app: **Vandaag** → bel-icoon → meldingen toestaan. Op iPhone: app eerst **toevoegen aan beginscherm**.
+
+## 6. Eerste account
 
 1. Open de app via je subdomein.
 2. Klik **Aanmelden** → **Registreren** (geen gastmodus).
 3. E-mail + wachtwoord (min. 8 tekens).
 
-## 6. Data uit InstantDB
+## 7. Data uit InstantDB
 
 Zie [`scripts/migrate-instant-to-mysql.mjs`](../scripts/migrate-instant-to-mysql.mjs) en een handmatige JSON-export uit het Instant-dashboard.
 

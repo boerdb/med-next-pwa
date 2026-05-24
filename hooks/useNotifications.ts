@@ -17,12 +17,24 @@ import {
   registerPeriodicReminderSync,
   unregisterPeriodicReminderSync,
 } from '@/lib/reminder-sync';
+import {
+  isPushConfigured,
+  resyncPushSubscriptionIfNeeded,
+  subscribePush,
+  unsubscribePush,
+} from '@/lib/push/client';
+import { getPushBlockReason, pushBlockMessage } from '@/lib/pwa-capabilities';
+import { medicationDaysLeft } from '@/lib/stock';
 import { toLocalDateKey } from '@/lib/utils';
 import type { Medication, LogEntry } from '@/lib/db/types';
 
 function parseJson<T>(value: string | null, fallback: T): T {
   if (!value) return fallback;
-  try { return JSON.parse(value) as T; } catch { return fallback; }
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
 }
 
 const LOW_STOCK_THRESHOLD = 7;
@@ -30,27 +42,28 @@ const LOW_STOCK_THRESHOLD = 7;
 export function useNotifications(medications: Medication[], logs: LogEntry[]) {
   const [enabled, setEnabled] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
+  const [pushHint, setPushHint] = useState<string | null>(null);
   const flagsRef = useRef<ReminderFlags>({});
 
-  // Hydrate from localStorage (client only)
   useEffect(() => {
-    // Wrap in queueMicrotask to avoid synchronous setState-in-effect lint warning
-    // while still hydrating from localStorage before first paint
     const hydrate = async () => {
       setEnabled(getNotificationsEnabled());
       setPermission(
         typeof Notification !== 'undefined' ? Notification.permission : 'denied',
       );
+      const configured = isPushConfigured();
+      setPushHint(pushBlockMessage(getPushBlockReason(configured)));
+      if (getNotificationsEnabled() && configured) {
+        await resyncPushSubscriptionIfNeeded();
+      }
     };
     void hydrate();
-    // Merge flags from cache (service worker may have updated them)
     mergeReminderFlagsFromCache().then((cached) => {
       const local = parseJson<ReminderFlags>(localStorage.getItem(REMINDER_FLAGS_KEY), {});
       flagsRef.current = mergeReminderFlagRecords(local, cached);
     });
   }, []);
 
-  // Reminder tick every 60 seconds when notifications are enabled
   useEffect(() => {
     if (!enabled) return;
 
@@ -79,31 +92,55 @@ export function useNotifications(medications: Medication[], logs: LogEntry[]) {
     return () => clearInterval(id);
   }, [enabled, medications, logs]);
 
-  // Low-stock check on data change
   useEffect(() => {
     if (!enabled) return;
     const dateKey = toLocalDateKey();
     medications.forEach((med) => {
-      if (med.stockCount !== null && med.stockCount <= LOW_STOCK_THRESHOLD) {
-        showLowStockNotification(dateKey, med.name, med.stockCount);
+      const daysLeft = medicationDaysLeft(med);
+      if (daysLeft !== null && daysLeft <= LOW_STOCK_THRESHOLD) {
+        showLowStockNotification(dateKey, med.name, daysLeft);
       }
     });
   }, [enabled, medications]);
 
   const toggle = async () => {
     if (!enabled) {
+      const configured = isPushConfigured();
+      const block = getPushBlockReason(configured);
+      if (block === 'denied') {
+        setPushHint(pushBlockMessage(block));
+        return;
+      }
+
       const perm = await requestNotificationPermission();
       setPermission(perm);
       if (perm !== 'granted') return;
+
+      if (configured && !block) {
+        try {
+          await subscribePush();
+          setPushHint(null);
+        } catch (e) {
+          console.warn('[push] subscribe failed', e);
+          setPushHint(
+            'Meldingen in de app werken, maar push op de achtergrond kon niet worden geregistreerd.',
+          );
+        }
+      } else if (block) {
+        setPushHint(pushBlockMessage(block));
+      }
+
       persistNotificationsEnabled(true);
       setEnabled(true);
       await registerPeriodicReminderSync();
     } else {
       persistNotificationsEnabled(false);
       setEnabled(false);
+      setPushHint(null);
+      await unsubscribePush();
       await unregisterPeriodicReminderSync();
     }
   };
 
-  return { enabled, permission, toggle };
+  return { enabled, permission, pushHint, toggle };
 }

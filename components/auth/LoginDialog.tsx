@@ -6,9 +6,11 @@ import { notifyDataChanged } from '@/lib/db/refresh';
 
 interface LoginDialogProps {
   onClose?: () => void;
+  /** Geen sluitknop — gebruiker moet inloggen of registreren */
+  required?: boolean;
 }
 
-export function LoginDialog({ onClose }: LoginDialogProps) {
+export function LoginDialog({ onClose, required }: LoginDialogProps) {
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,11 +56,12 @@ export function LoginDialog({ onClose }: LoginDialogProps) {
                 Sync je medicijnen via je eigen server
               </p>
             </div>
-            {onClose && (
+            {onClose && !required && (
               <button
                 type="button"
                 onClick={onClose}
                 className="p-1.5 text-white/60 hover:text-white rounded-lg transition-colors"
+                aria-label="Sluiten"
               >
                 <X className="w-5 h-5" />
               </button>

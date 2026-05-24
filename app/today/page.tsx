@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAppData } from '@/hooks/useAppData';
 import { signOut } from '@/lib/db/transact';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
 import { useNotifications } from '@/hooks/useNotifications';
 import { DailyProgress } from '@/components/today/DailyProgress';
 import { MedicationCard } from '@/components/today/MedicationCard';
-import { LoginDialog } from '@/components/auth/LoginDialog';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
-import { Bell, BellOff, Loader2, LogOut, User } from 'lucide-react';
+import { Bell, BellOff, Loader2, LogOut } from 'lucide-react';
 import { sortMedicationsBySchedule, toLocalDateKey } from '@/lib/utils';
 import type { Status } from '@/lib/db/types';
 
@@ -35,19 +34,12 @@ async function playTone(durationMs = 130, frequency = 880, volume = 0.12) {
 
 export default function TodayPage() {
   const { isLoading, error, medications, logs, user } = useAppData();
-  const { enabled: notifEnabled, toggle: toggleNotif } = useNotifications(medications, logs);
-  const [showLogin, setShowLogin] = useState(false);
+  const { enabled: notifEnabled, pushHint, toggle: toggleNotif } = useNotifications(
+    medications,
+    logs,
+  );
   const todayKey = toLocalDateKey();
   const { handleLog: logForDate, logError } = useMedicationLog(logs, user?.id);
-
-  // Show login dialog if cloud is configured and user is not logged in after loading
-  useEffect(() => {
-    if (!isLoading && !user) {
-      // Small delay so the page renders first
-      const t = setTimeout(() => setShowLogin(true), 800);
-      return () => clearTimeout(t);
-    }
-  }, [isLoading, user]);
 
   const todayLogs = logs.filter((l) => l.dateKey === todayKey);
   const medicationsSorted = useMemo(() => sortMedicationsBySchedule(medications), [medications]);
@@ -56,10 +48,7 @@ export default function TodayPage() {
 
   const handleLog = useCallback(
     async (medicationId: string, medicationName: string, time: string, status: Status) => {
-      if (!user?.id) {
-        setShowLogin(true);
-        return;
-      }
+      if (!user?.id) return;
       await playTone(status === 'taken' ? 120 : 80, status === 'taken' ? 880 : 660);
       await logForDate(todayKey, medicationId, medicationName, time, status);
     },
@@ -106,16 +95,18 @@ export default function TodayPage() {
               <LogOut className="w-3.5 h-3.5" />
             </button>
           ) : (
-            <button
-              onClick={() => setShowLogin(true)}
-              className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
-              title="Aanmelden"
-            >
-              <User className="w-3.5 h-3.5" />
-            </button>
+            <span className="text-xs px-3 py-1.5 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-medium">
+              Niet ingelogd
+            </span>
           )}
         </div>
       </div>
+
+      {pushHint && (
+        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2 mb-4">
+          {pushHint}
+        </p>
+      )}
 
       {/* Error banner */}
       {(error || logError) && (
@@ -151,8 +142,6 @@ export default function TodayPage() {
         </div>
       )}
 
-      {/* Login dialog */}
-      {showLogin && <LoginDialog onClose={() => setShowLogin(false)} />}
     </div>
   );
 }
