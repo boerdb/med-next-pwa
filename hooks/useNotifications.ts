@@ -52,9 +52,20 @@ export function useNotifications(medications: Medication[], logs: LogEntry[]) {
         typeof Notification !== 'undefined' ? Notification.permission : 'denied',
       );
       const configured = isPushConfigured();
-      setPushHint(pushBlockMessage(getPushBlockReason(configured)));
-      if (getNotificationsEnabled() && configured) {
-        await resyncPushSubscriptionIfNeeded();
+      const block = getPushBlockReason(configured);
+      setPushHint(pushBlockMessage(block));
+      if (getNotificationsEnabled() && configured && !block) {
+        try {
+          const reg = await navigator.serviceWorker?.ready;
+          const existing = reg ? await reg.pushManager.getSubscription() : null;
+          if (existing) {
+            await resyncPushSubscriptionIfNeeded();
+          } else if (Notification.permission === 'granted') {
+            await subscribePush();
+          }
+        } catch (e) {
+          console.warn('[push] auto-register failed', e);
+        }
       }
     };
     void hydrate();

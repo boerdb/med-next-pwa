@@ -5,11 +5,11 @@ const slotTagForNotify = (sk: string) =>
 
 export function reminderEventToPushPayload(ev: ReminderEvent, slotKeyStr: string) {
   const stage = ev.kind;
-  const title = stage === 'first' ? 'Medicijn innemen' : 'Medicijn nog niet ingenomen';
+  const title = stage === 'first' ? 'Medicijn innemen' : 'Nog niet geregistreerd';
   const body =
     stage === 'first'
-      ? `${ev.medicationName} — ${ev.time}. Open de app om te registreren.`
-      : `${ev.medicationName} om ${ev.time} — nog steeds niet geregistreerd na 5 minuten.`;
+      ? `${ev.medicationName} — ${ev.time}. Tik in de app op Innemen.`
+      : `${ev.medicationName} (${ev.time}): nog niet als ingenomen gemarkeerd. Open de app en tik op Innemen.`;
 
   return {
     title,

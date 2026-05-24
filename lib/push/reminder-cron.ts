@@ -1,7 +1,7 @@
 import { getPool } from '@/lib/db/mysql';
 import { rowToLogEntry, rowToMedication } from '@/lib/db/rows';
 import { runReminderTick, slotKey, type LogLite, type MedicationLite } from '@/lib/reminder-logic';
-import { toLocalDateKey } from '@/lib/utils';
+import { APP_TIMEZONE, toDateKeyInTimeZone } from '@/lib/timezone';
 import type { RowDataPacket } from 'mysql2';
 import {
   deletePushSubscription,
@@ -32,7 +32,7 @@ async function loadUserReminderData(userId: string): Promise<{
   logs: LogLite[];
 }> {
   const pool = getPool();
-  const dateKey = toLocalDateKey();
+  const dateKey = toDateKeyInTimeZone(new Date(), APP_TIMEZONE);
 
   const [medRows] = await pool.query<MedRow[]>(
     'SELECT id, name, times, stock_count FROM medications WHERE user_id = ?',
@@ -67,6 +67,8 @@ export async function processMedicationReminderPush(): Promise<{
   sent: number;
   failed: number;
   skipped: boolean;
+  timezone?: string;
+  dateKey?: string;
 }> {
   if (!isPushConfigured()) {
     return { ok: true, users: 0, sent: 0, failed: 0, skipped: true };
@@ -82,13 +84,14 @@ export async function processMedicationReminderPush(): Promise<{
 
     const { medications, logs } = await loadUserReminderData(userId);
     const flags = await getReminderFlags(userId);
-    const dateKey = toLocalDateKey();
+    const dateKey = toDateKeyInTimeZone(new Date(), APP_TIMEZONE);
     const { nextFlags, events } = runReminderTick({
       now: Date.now(),
       dateKey,
       medications,
       logs,
       flags,
+      scheduleTimeZone: APP_TIMEZONE,
     });
     await saveReminderFlags(userId, nextFlags);
 
@@ -109,5 +112,13 @@ export async function processMedicationReminderPush(): Promise<{
     }
   }
 
-  return { ok: true, users: userIds.length, sent, failed, skipped: false };
+  return {
+    ok: true,
+    users: userIds.length,
+    sent,
+    failed,
+    skipped: false,
+    timezone: APP_TIMEZONE,
+    dateKey: toDateKeyInTimeZone(new Date(), APP_TIMEZONE),
+  };
 }

@@ -40,11 +40,11 @@ export async function showMedicationNotification(
 ): Promise<void> {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-  const title = stage === 'first' ? 'Medicijn innemen' : 'Medicijn nog niet ingenomen';
+  const title = stage === 'first' ? 'Medicijn innemen' : 'Nog niet geregistreerd';
   const body =
     stage === 'first'
-      ? `${medicationName} — ${time}. Open de app om te registreren.`
-      : `${medicationName} om ${time} — nog steeds niet geregistreerd na 5 minuten.`;
+      ? `${medicationName} — ${time}. Tik in de app op Innemen.`
+      : `${medicationName} (${time}): nog niet als ingenomen gemarkeerd. Open de app en tik op Innemen.`;
 
   const tag = `mt-${slotTagForNotify(sk)}-${stage}`;
   const icon = '/icons/icon-192x192.png';

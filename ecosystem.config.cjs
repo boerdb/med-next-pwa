@@ -9,6 +9,8 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3007,
+        TZ: 'Europe/Amsterdam',
+        APP_TIMEZONE: 'Europe/Amsterdam',
       },
     },
   ],

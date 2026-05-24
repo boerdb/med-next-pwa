@@ -1,3 +1,5 @@
+import { parseScheduleMsInTimeZone } from './timezone';
+
 export type ReminderFlags = Record<string, { first?: boolean; second?: boolean }>;
 
 export type MedicationLite = { id: string; name: string; times: string[] };
@@ -16,7 +18,14 @@ export function slotKey(dateKey: string, medicationId: string, time: string) {
   return `${dateKey}::${medicationId}::${time}`;
 }
 
-export function parseLocalScheduleMs(dateKey: string, timeHHMM: string): number {
+export function parseLocalScheduleMs(
+  dateKey: string,
+  timeHHMM: string,
+  timeZone?: string,
+): number {
+  if (timeZone) {
+    return parseScheduleMsInTimeZone(dateKey, timeHHMM, timeZone);
+  }
   const [y, mo, d] = dateKey.split('-').map(Number);
   const [hh, mm] = timeHHMM.split(':').map(Number);
   return new Date(y, mo - 1, d, hh, mm, 0, 0).getTime();
@@ -37,8 +46,10 @@ export function runReminderTick(params: {
   medications: MedicationLite[];
   logs: LogLite[];
   flags: ReminderFlags;
+  /** IANA zone for server cron (e.g. Europe/Amsterdam). Omit on client = device local time. */
+  scheduleTimeZone?: string;
 }): { nextFlags: ReminderFlags; events: ReminderEvent[] } {
-  const { now, dateKey, medications, logs } = params;
+  const { now, dateKey, medications, logs, scheduleTimeZone } = params;
   const flags = { ...pruneOldDays(params.flags, dateKey) };
   const events: ReminderEvent[] = [];
 
@@ -56,14 +67,15 @@ export function runReminderTick(params: {
       if (status === 'taken' || status === 'skipped') continue;
 
       const sk = slotKey(dateKey, med.id, time);
-      const dueMs = parseLocalScheduleMs(dateKey, time);
+      const dueMs = parseLocalScheduleMs(dateKey, time, scheduleTimeZone);
       const duePlus5 = dueMs + 5 * 60 * 1000;
       const entry = flags[sk] ?? {};
 
-      if (now >= duePlus5 && !entry.second) {
-        flags[sk] = { ...entry, first: true, second: true };
+      // Eerste melding zodra de tijd is (ook als cron/server later pas draait — niet meteen de +5 min-tekst).
+      if (now >= dueMs && !entry.first) {
+        flags[sk] = { ...entry, first: true };
         events.push({
-          kind: 'second',
+          kind: 'first',
           medicationId: med.id,
           medicationName: medNameById.get(med.id) ?? 'Medicijn',
           time,
@@ -71,10 +83,11 @@ export function runReminderTick(params: {
         continue;
       }
 
-      if (now >= dueMs && now < duePlus5 && !entry.first) {
-        flags[sk] = { ...entry, first: true };
+      // Tweede melding alleen ≥5 min na inname-tijd én ná de eerste push.
+      if (now >= duePlus5 && entry.first && !entry.second) {
+        flags[sk] = { ...entry, first: true, second: true };
         events.push({
-          kind: 'first',
+          kind: 'second',
           medicationId: med.id,
           medicationName: medNameById.get(med.id) ?? 'Medicijn',
           time,

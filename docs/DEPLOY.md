@@ -116,8 +116,9 @@ VAPID_SUBJECT=mailto:med@clvs.nl
 CRON_SECRET=<openssl rand -hex 32>
 ```
 
-4. Herbouw en herstart PM2 (`npm run build`, `pm2 restart med-next-pwa`).
-5. Cron op **NEXT** (elke minuut):
+4. Zet ook `APP_TIMEZONE=Europe/Amsterdam` (medicatietijden zijn NL-lokale tijd; server draait vaak op UTC).
+5. Herbouw en herstart PM2 (`npm run build`, `pm2 restart med-next-pwa --update-env`).
+6. Cron op **NEXT** (elke minuut):
 
 ```bash
 crontab -e
@@ -127,7 +128,7 @@ crontab -e
 * * * * * curl -fsS -H "Authorization: Bearer JOUW_CRON_SECRET" "http://127.0.0.1:3007/api/cron/check-reminders" >/dev/null
 ```
 
-6. In de app: **Vandaag** → bel-icoon → meldingen toestaan. Op iPhone: app eerst **toevoegen aan beginscherm**.
+7. In de app: **Vandaag** → bel-icoon → meldingen toestaan. Op iPhone: app eerst **toevoegen aan beginscherm**.
 
 ## 6. Eerste account
 
