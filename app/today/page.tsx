@@ -37,6 +37,7 @@ export default function TodayPage() {
   const { enabled: notifEnabled, pushHint, toggle: toggleNotif } = useNotifications(
     medications,
     logs,
+    { dataReady: !isLoading && !!user },
   );
   const todayKey = toLocalDateKey();
   const { handleLog: logForDate, logError } = useMedicationLog(logs, user?.id);

@@ -77,6 +77,17 @@ export async function unsubscribePush(): Promise<void> {
   }
 }
 
+/** True when server push is configured and this device has an active subscription. */
+export async function hasActivePushSubscription(): Promise<boolean> {
+  if (!isPushConfigured() || !('serviceWorker' in navigator)) return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    return Boolean(await reg.pushManager.getSubscription());
+  } catch {
+    return false;
+  }
+}
+
 export async function resyncPushSubscriptionIfNeeded(): Promise<void> {
   if (!isPushConfigured() || !('serviceWorker' in navigator)) return;
 

@@ -3,6 +3,7 @@ import { getPool } from '@/lib/db/mysql';
 import type { RowDataPacket } from 'mysql2';
 import type { PushSubscriptionJSON } from './types';
 import type { ReminderFlags } from '@/lib/reminder-logic';
+import { APP_TIMEZONE, toDateKeyInTimeZone } from '@/lib/timezone';
 
 function endpointHash(endpoint: string): string {
   return createHash('sha256').update(endpoint).digest('hex');
@@ -75,11 +76,7 @@ export async function getReminderFlags(userId: string): Promise<ReminderFlags> {
 
 export async function saveReminderFlags(userId: string, flags: ReminderFlags): Promise<void> {
   const pool = getPool();
-  const dateKey = new Date();
-  const y = dateKey.getFullYear();
-  const m = String(dateKey.getMonth() + 1).padStart(2, '0');
-  const d = String(dateKey.getDate()).padStart(2, '0');
-  const today = `${y}-${m}-${d}`;
+  const today = toDateKeyInTimeZone(new Date(), APP_TIMEZONE);
 
   const entries = Object.entries(flags).filter(([k]) => k.startsWith(`${today}::`));
   await pool.query('DELETE FROM push_reminder_flags WHERE user_id = ?', [userId]);
