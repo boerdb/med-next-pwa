@@ -5,10 +5,11 @@ import {
   getNotificationsEnabled,
   persistNotificationsEnabled,
   requestNotificationPermission,
-  showMedicationNotification,
+  showBundledMedicationNotification,
   showLowStockNotification,
 } from '@/lib/notification-prefs';
-import { runReminderTick, slotKey, type ReminderFlags } from '@/lib/reminder-logic';
+import { bundleReminderEvents } from '@/lib/reminder-bundle';
+import { runReminderTick, type ReminderFlags } from '@/lib/reminder-logic';
 import {
   REMINDER_FLAGS_KEY,
   syncReminderBundleToCache,
@@ -147,9 +148,9 @@ export function useNotifications(
       flagsRef.current = nextFlags;
       localStorage.setItem(REMINDER_FLAGS_KEY, JSON.stringify(nextFlags));
 
-      for (const ev of events) {
-        const sk = slotKey(dateKey, ev.medicationId, ev.time);
-        await showMedicationNotification(ev.medicationName, ev.time, ev.kind, sk);
+      const bundles = bundleReminderEvents(events, dateKey);
+      for (const bundle of bundles) {
+        await showBundledMedicationNotification(bundle);
       }
 
       await syncReminderBundleToCache();

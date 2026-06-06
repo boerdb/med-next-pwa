@@ -86,6 +86,36 @@ self.addEventListener('periodicsync', (event) => {
 });
 
 // ─── Reminder check helper (periodic sync fallback, Android/desktop) ───────
+function formatMedicationList(names) {
+  if (names.length === 0) return '';
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} en ${names[1]}`;
+  return `${names.slice(0, -1).join(', ')} en ${names[names.length - 1]}`;
+}
+
+function bundledReminderTag(dateKey, time, kind) {
+  const raw = `${dateKey}-${time.replace(':', '')}-${kind}`;
+  return `mt-${raw.replace(/[^a-zA-Z0-9_-]/g, '')}`;
+}
+
+function bundledReminderBody(kind, time, names) {
+  const list = formatMedicationList(names);
+  if (kind === 'first') {
+    return `${list} — ${time}. Open de app om te registreren.`;
+  }
+  return `${list} (${time}): nog niet als ingenomen gemarkeerd. Open de app en tik op Innemen.`;
+}
+
+async function showBundledReminderNotification(kind, dateKey, time, names) {
+  const title = kind === 'first' ? 'Medicijn innemen' : 'Medicijn nog niet ingenomen';
+  await self.registration.showNotification(title, {
+    body: bundledReminderBody(kind, time, names),
+    icon: '/icons/icon-192x192.png',
+    tag: bundledReminderTag(dateKey, time, kind),
+    vibrate: kind === 'first' ? [160] : [180, 100, 180],
+  });
+}
+
 async function checkReminders() {
   try {
     const cache = await caches.open('medtracker-data-v1');
@@ -105,6 +135,8 @@ async function checkReminders() {
 
     const { medications = [], logs = [], reminderBeeps = {} } = bundle;
     const updatedFlags = { ...reminderBeeps };
+    const pendingFirst = new Map();
+    const pendingSecond = new Map();
 
     for (const med of medications) {
       for (const time of med.times) {
@@ -120,22 +152,25 @@ async function checkReminders() {
 
         if (now >= dueMs + 5 * 60_000 && !entry.second) {
           updatedFlags[sk] = { first: true, second: true };
-          await self.registration.showNotification('Medicijn nog niet ingenomen', {
-            body: `${med.name} om ${time} — nog steeds niet geregistreerd.`,
-            icon: '/icons/icon-192x192.png',
-            tag: `mt-${sk.replace(/::/g, '-')}-second`,
-            vibrate: [180, 100, 180],
-          });
+          const names = pendingSecond.get(time) ?? [];
+          names.push(med.name);
+          pendingSecond.set(time, names);
         } else if (now >= dueMs && now < dueMs + 5 * 60_000 && !entry.first) {
           updatedFlags[sk] = { ...entry, first: true };
-          await self.registration.showNotification('Medicijn innemen', {
-            body: `${med.name} — ${time}. Open de app om te registreren.`,
-            icon: '/icons/icon-192x192.png',
-            tag: `mt-${sk.replace(/::/g, '-')}-first`,
-            vibrate: [160],
-          });
+          const names = pendingFirst.get(time) ?? [];
+          names.push(med.name);
+          pendingFirst.set(time, names);
         }
       }
+    }
+
+    for (const [time, names] of pendingFirst) {
+      names.sort((a, b) => a.localeCompare(b, 'nl'));
+      await showBundledReminderNotification('first', dateKey, time, names);
+    }
+    for (const [time, names] of pendingSecond) {
+      names.sort((a, b) => a.localeCompare(b, 'nl'));
+      await showBundledReminderNotification('second', dateKey, time, names);
     }
 
     // Persist updated flags back to cache

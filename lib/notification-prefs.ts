@@ -14,8 +14,13 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
   return Notification.requestPermission();
 }
 
-const slotTagForNotify = (sk: string) =>
-  sk.replace(/::/g, '-').replace(/[^a-zA-Z0-9_-]/g, '');
+import {
+  bundledReminderBody,
+  bundledReminderTag,
+  bundledReminderTitle,
+  bundledReminderVibrate,
+  type BundledReminderEvent,
+} from '@/lib/reminder-bundle';
 
 const SW_READY_MS = 2500;
 
@@ -32,21 +37,15 @@ async function registrationWhenReady(): Promise<ServiceWorkerRegistration | null
   }
 }
 
-export async function showMedicationNotification(
-  medicationName: string,
-  time: string,
-  stage: 'first' | 'second',
-  sk: string,
+export async function showBundledMedicationNotification(
+  bundle: BundledReminderEvent,
 ): Promise<void> {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
-  const title = stage === 'first' ? 'Medicijn innemen' : 'Nog niet geregistreerd';
-  const body =
-    stage === 'first'
-      ? `${medicationName} — ${time}. Tik in de app op Innemen.`
-      : `${medicationName} (${time}): nog niet als ingenomen gemarkeerd. Open de app en tik op Innemen.`;
-
-  const tag = `mt-${slotTagForNotify(sk)}-${stage}`;
+  const stage = bundle.kind;
+  const title = bundledReminderTitle(stage);
+  const body = bundledReminderBody(bundle);
+  const tag = bundledReminderTag(bundle.dateKey, bundle.time, stage);
   const icon = '/icons/icon-192x192.png';
   const badge = '/icons/icon-192x192.png';
 
@@ -58,7 +57,7 @@ export async function showMedicationNotification(
         icon,
         badge,
         tag,
-        vibrate: stage === 'first' ? [160] : [180, 100, 180],
+        vibrate: bundledReminderVibrate(stage),
       } as NotificationOptions);
       return;
     }

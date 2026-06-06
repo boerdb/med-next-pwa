@@ -1,6 +1,7 @@
 import { getPool } from '@/lib/db/mysql';
 import { rowToLogEntry, rowToMedication } from '@/lib/db/rows';
-import { runReminderTick, slotKey, type LogLite, type MedicationLite } from '@/lib/reminder-logic';
+import { bundleReminderEvents } from '@/lib/reminder-bundle';
+import { runReminderTick, type LogLite, type MedicationLite } from '@/lib/reminder-logic';
 import { APP_TIMEZONE, toDateKeyInTimeZone } from '@/lib/timezone';
 import type { RowDataPacket } from 'mysql2';
 import {
@@ -10,7 +11,7 @@ import {
   getUserIdsWithPushSubscriptions,
   saveReminderFlags,
 } from './store';
-import { reminderEventToPushPayload } from './reminder-payload';
+import { bundledReminderToPushPayload } from './reminder-payload';
 import { isPushConfigured, sendMedicationPush } from './web-push';
 
 type MedRow = RowDataPacket & {
@@ -95,9 +96,9 @@ export async function processMedicationReminderPush(): Promise<{
     });
     await saveReminderFlags(userId, nextFlags);
 
-    for (const ev of events) {
-      const sk = slotKey(dateKey, ev.medicationId, ev.time);
-      const payload = reminderEventToPushPayload(ev, sk);
+    const bundles = bundleReminderEvents(events, dateKey);
+    for (const bundle of bundles) {
+      const payload = bundledReminderToPushPayload(bundle);
       for (const sub of subs) {
         const result = await sendMedicationPush(sub, payload);
         if (result.ok) {
