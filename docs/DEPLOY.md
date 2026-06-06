@@ -23,10 +23,9 @@ FLUSH PRIVILEGES;
 
 ## 2. Omgevingsvariabelen
 
-Op de server staan twee sjablonen (zelfde inhoud):
+Op de server staat het sjabloon:
 
 - `/var/www/med-next-pwa/.env.example` — standaard (verborgen in sommige bestandsbeheerders)
-- `/var/www/med-next-pwa/env.example` — zichtbare kopie zonder leading dot
 
 In SSH: `ls -la /var/www/med-next-pwa/.env*`
 
@@ -74,7 +73,78 @@ Restart=on-failure
 WantedBy=multi-user.target
 ```
 
-## 4. Cloudflare Tunnel
+## 4. Code bijwerken op de server
+
+De app staat in een **git-repo** op de server (`/var/www/med-next-pwa`, remote `git@github.com:boerdb/med-next-pwa.git`). Er zijn twee manieren om nieuwe code te deployen. **Kies één methode en wissel niet af** — anders raakt git out of sync met de draaiende code.
+
+### Methode A — `git pull` op de server (aanbevolen)
+
+Gebruik dit als je op de server via SSH werkt en wijzigingen via GitHub pusht.
+
+```bash
+cd /var/www/med-next-pwa
+git pull
+npm ci
+npm run build
+pm2 restart med-next-pwa --update-env
+```
+
+Controle:
+
+```bash
+git status          # moet "working tree clean" tonen
+git log -1 --oneline
+pm2 list | grep med-next
+```
+
+### Methode B — deploy-script vanaf je PC
+
+Uploadt een tarball naar de server **zonder** git bij te werken. Handig voor eerste installatie of als je geen git op de server wilt gebruiken.
+
+```bash
+# Volledige upload + build + PM2
+python scripts/deploy_remote.py
+
+# Alleen code uploaden + build + herstart (sneller)
+python scripts/deploy_quick.py
+
+# Alleen build/herstart (bestanden staan al op server)
+python scripts/deploy_finish.py
+```
+
+**Let op:** deploy-scripts slaan `.git` over en overschrijven bestanden direct. Daardoor ziet git op de server lokale wijzigingen en untracked bestanden, terwijl de draaiende app wél up-to-date kan zijn. `git pull` faalt dan met fouten als:
+
+```
+error: Your local changes to the following files would be overwritten by merge
+error: The following untracked working tree files would be overwritten by merge
+```
+
+### Git pull herstellen na gemengd deployen
+
+Als je per ongeluk deploy-scripts én `git pull` door elkaar hebt gebruikt:
+
+```bash
+cd /var/www/med-next-pwa
+git fetch origin
+git reset --hard origin/main   # zet tracked bestanden gelijk met GitHub
+git clean -fd                  # verwijdert untracked resten (niet .env.local)
+git status                     # moet clean zijn
+npm ci && npm run build
+pm2 restart med-next-pwa --update-env
+```
+
+`.env.local` blijft behouden (staat in `.gitignore`). Gebruik **nooit** `git clean -fdx` — dat verwijdert ook ignored bestanden inclusief `.env.local`.
+
+### Samenvatting
+
+| | `git pull` (A) | deploy-script (B) |
+|---|---|---|
+| Waar | op server via SSH | vanaf je PC |
+| Git op server | blijft synchroon | raakt out of sync |
+| `.env.local` | blijft staan | blijft staan (niet in tarball) |
+| Wanneer | normale updates | eerste installatie / no-git |
+
+## 5. Cloudflare Tunnel
 
 De app luistert op **poort 3007** (`pm2`, proces `med-next-pwa` — zelfde naam als de map).
 
@@ -87,18 +157,19 @@ ingress:
   - service: http_status:404
 ```
 
-Deploy vanaf je PC (SSH root):
+Deploy vanaf je PC (alleen als je **methode B** gebruikt — zie §4):
 
 ```bash
 python scripts/deploy_remote.py
 # of alleen build/herstart:
 python scripts/deploy_finish.py
 python scripts/deploy_pm2.py
+python scripts/deploy_quick.py
 ```
 
 Zorg dat in Cloudflare **SSL/TLS** op *Full* staat als je lokaal geen TLS hebt; de tunnel regelt HTTPS naar de gebruiker.
 
-## 5. Push-meldingen (ook als de app dicht is)
+## 6. Push-meldingen (ook als de app dicht is)
 
 1. Voer op MySQL [`sql/push-tables.sql`](../sql/push-tables.sql) uit (of opnieuw `schema.sql` op een lege DB).
 2. Genereer VAPID-sleutels op de server:
@@ -130,7 +201,7 @@ crontab -e
 
 7. In de app: **Vandaag** → bel-icoon → meldingen toestaan. Op iPhone: app eerst **toevoegen aan beginscherm**.
 
-## 6. Eerste account
+## 7. Eerste account
 
 1. Open de app via je subdomein.
 2. Klik **Aanmelden** → **Registreren** (geen gastmodus).
