@@ -5,6 +5,7 @@ import { useAppData } from '@/hooks/useAppData';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
 import { toLocalDateKey, parseDateKey } from '@/lib/utils';
+import { getExpectedSlots } from '@/lib/schedule';
 import { Check, Minus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import type { LogEntry, Medication, HistoryDayGroup, Status } from '@/lib/db/types';
 
@@ -29,15 +30,10 @@ function buildHistoryDays(
     const dayLogs = logs.filter((l) => l.dateKey === dateKey);
     const activeMedIds = new Set(medications.map((m) => m.id));
 
-    const scheduleRows = medications.flatMap((m) =>
-      m.times.map((time) => ({
-        id: `${m.id}-${time}`,
-        medicationId: m.id,
-        medicationName: m.name,
-        time,
-        status: dayLogs.find((l) => l.medicationId === m.id && l.time === time)?.status,
-      })),
-    ).sort((a, b) => a.time.localeCompare(b.time));
+    const scheduleRows = getExpectedSlots(medications, dateKey).map((row) => ({
+      ...row,
+      status: dayLogs.find((l) => l.medicationId === row.medicationId && l.time === row.time)?.status,
+    }));
 
     const orphanEntries = dayLogs.filter((l) => !activeMedIds.has(l.medicationId));
     const takenCount = dayLogs.filter((l) => l.status === 'taken').length;

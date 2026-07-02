@@ -14,10 +14,13 @@ import {
   MedicationTimesEditor,
   mergeMedicationTimes,
 } from '@/components/manage/MedicationTimesEditor';
+import { MedicationDaysEditor } from '@/components/manage/MedicationDaysEditor';
+import { formatDaysOfWeekLabel } from '@/lib/schedule';
 
 function AddMedicationForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
   const [times, setTimes] = useState<string[]>([]);
+  const [daysOfWeek, setDaysOfWeek] = useState<number[] | null>(null);
   const [pendingTime, setPendingTime] = useState('');
   const [stock, setStock] = useState('');
   const [busy, setBusy] = useState(false);
@@ -36,7 +39,12 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
       const stockCount = stock.trim() && Number.isFinite(parsedStock) && parsedStock >= 0
         ? Math.floor(parsedStock) : null;
       const id = uid();
-      await upsertMedication(id, { name: name.trim(), times: allTimes, stockCount });
+      await upsertMedication(id, {
+        name: name.trim(),
+        times: allTimes,
+        daysOfWeek,
+        stockCount,
+      });
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Opslaan mislukt.');
@@ -87,6 +95,8 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
+      <MedicationDaysEditor daysOfWeek={daysOfWeek} onChange={setDaysOfWeek} />
+
       <MedicationTimesEditor
         times={times}
         onChange={setTimes}
@@ -126,6 +136,7 @@ function EditMedicationCard({
 }) {
   const [name, setName] = useState(medication.name);
   const [times, setTimes] = useState<string[]>([...medication.times]);
+  const [daysOfWeek, setDaysOfWeek] = useState<number[] | null>(medication.daysOfWeek);
   const [pendingTime, setPendingTime] = useState('');
   const [stock, setStock] = useState(medication.stockCount !== null ? String(medication.stockCount) : '');
   const [busy, setBusy] = useState(false);
@@ -143,7 +154,12 @@ function EditMedicationCard({
       const parsedStock = Number(stock.trim());
       const stockCount = stock.trim() && Number.isFinite(parsedStock) && parsedStock >= 0
         ? Math.floor(parsedStock) : null;
-      await upsertMedication(medication.id, { name: name.trim(), times: allTimes, stockCount });
+      await upsertMedication(medication.id, {
+        name: name.trim(),
+        times: allTimes,
+        daysOfWeek,
+        stockCount,
+      });
       onDone();
     } finally {
       setBusy(false);
@@ -187,6 +203,8 @@ function EditMedicationCard({
           </button>
         ))}
       </div>
+
+      <MedicationDaysEditor daysOfWeek={daysOfWeek} onChange={setDaysOfWeek} />
 
       <MedicationTimesEditor
         times={times}
@@ -237,6 +255,9 @@ function MedicationListCard({
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">{medication.name}</p>
           <div className="flex flex-wrap gap-1 mt-1">
+            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-medium rounded-full">
+              {formatDaysOfWeekLabel(medication.daysOfWeek)}
+            </span>
             {medication.times.map((t) => (
               <span key={t} className="px-2 py-0.5 bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 text-[11px] font-mono rounded-full">
                 {t}

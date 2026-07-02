@@ -137,8 +137,12 @@ async function checkReminders() {
     const updatedFlags = { ...reminderBeeps };
     const pendingFirst = new Map();
     const pendingSecond = new Map();
+    const weekday = date.getDay();
 
     for (const med of medications) {
+      const days = med.daysOfWeek;
+      if (Array.isArray(days) && days.length > 0 && !days.includes(weekday)) continue;
+
       for (const time of med.times) {
         const logged = logs.some(
           (l) => l.medicationId === med.id && l.dateKey === dateKey && l.time === time,

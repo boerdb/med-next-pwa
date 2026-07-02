@@ -2,6 +2,8 @@ export type Medication = {
   id: string;
   name: string;
   times: string[];
+  /** null = elke dag; anders gekozen weekdagen (0=zondag … 6=zaterdag) */
+  daysOfWeek: number[] | null;
   stockCount: number | null;
 };
 

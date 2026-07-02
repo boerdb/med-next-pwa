@@ -1,3 +1,5 @@
+import { normalizeDaysOfWeek } from './schedule';
+
 /** Local date key (YYYY-MM-DD) using local timezone — avoids UTC midnight shift. */
 export function toLocalDateKey(date: Date = new Date()): string {
   const y = date.getFullYear();
@@ -30,11 +32,17 @@ export function uid(): string {
   return Math.random().toString(36).slice(2);
 }
 
-export function normalizeMedication<T extends { stockCount?: number | null | string }>(raw: T): T {
+export function normalizeMedication<T extends { stockCount?: number | null | string; daysOfWeek?: unknown }>(
+  raw: T,
+): T & { daysOfWeek: number[] | null; stockCount: number | null } {
   const parsed = Number(raw.stockCount);
   const stockCount =
     Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
-  return { ...raw, stockCount };
+  return {
+    ...raw,
+    stockCount,
+    daysOfWeek: normalizeDaysOfWeek(raw.daysOfWeek),
+  };
 }
 
 export function cn(...classes: (string | undefined | null | false)[]): string {

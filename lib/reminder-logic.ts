@@ -1,8 +1,14 @@
 import { parseScheduleMsInTimeZone } from './timezone';
+import { isMedicationDueOnDate } from './schedule';
 
 export type ReminderFlags = Record<string, { first?: boolean; second?: boolean }>;
 
-export type MedicationLite = { id: string; name: string; times: string[] };
+export type MedicationLite = {
+  id: string;
+  name: string;
+  times: string[];
+  daysOfWeek?: number[] | null;
+};
 export type LogLite = {
   medicationId: string;
   dateKey: string;
@@ -62,6 +68,8 @@ export function runReminderTick(params: {
   const medNameById = new Map(medications.map((m) => [m.id, m.name]));
 
   for (const med of medications) {
+    if (!isMedicationDueOnDate(med, dateKey)) continue;
+
     for (const time of med.times) {
       const status = statusBySlot.get(`${med.id}::${time}`);
       if (status === 'taken' || status === 'skipped') continue;

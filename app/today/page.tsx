@@ -10,6 +10,7 @@ import { MedicationCard } from '@/components/today/MedicationCard';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Bell, BellOff, Loader2, LogOut } from 'lucide-react';
 import { sortMedicationsBySchedule, toLocalDateKey } from '@/lib/utils';
+import { countExpectedDoses, getExpectedSlots, isMedicationDueOnDate } from '@/lib/schedule';
 import type { Status } from '@/lib/db/types';
 
 async function playTone(durationMs = 130, frequency = 880, volume = 0.12) {
@@ -43,9 +44,22 @@ export default function TodayPage() {
   const { handleLog: logForDate, logError } = useMedicationLog(logs, user?.id);
 
   const todayLogs = logs.filter((l) => l.dateKey === todayKey);
-  const medicationsSorted = useMemo(() => sortMedicationsBySchedule(medications), [medications]);
-  const totalDoses = medications.reduce((sum, m) => sum + m.times.length, 0);
-  const takenToday = todayLogs.filter((l) => l.status === 'taken').length;
+  const medicationsDueToday = useMemo(
+    () => medications.filter((m) => isMedicationDueOnDate(m, todayKey)),
+    [medications, todayKey],
+  );
+  const medicationsSorted = useMemo(
+    () => sortMedicationsBySchedule(medicationsDueToday),
+    [medicationsDueToday],
+  );
+  const totalDoses = countExpectedDoses(medications, todayKey);
+  const expectedSlotKeys = useMemo(
+    () => new Set(getExpectedSlots(medications, todayKey).map((r) => `${r.medicationId}::${r.time}`)),
+    [medications, todayKey],
+  );
+  const takenToday = todayLogs.filter(
+    (l) => l.status === 'taken' && expectedSlotKeys.has(`${l.medicationId}::${l.time}`),
+  ).length;
 
   const handleLog = useCallback(
     async (medicationId: string, medicationName: string, time: string, status: Status) => {
@@ -117,7 +131,7 @@ export default function TodayPage() {
       )}
 
       {/* Progress ring */}
-      {medications.length > 0 && (
+      {medications.length > 0 && totalDoses > 0 && (
         <div className="mb-5">
           <DailyProgress taken={takenToday} total={totalDoses} />
         </div>
@@ -126,8 +140,14 @@ export default function TodayPage() {
       {/* Medication cards */}
       {medicationsSorted.length === 0 ? (
         <div className="text-center py-16 text-slate-400 dark:text-slate-500">
-          <p className="text-lg font-medium">Geen medicijnen</p>
-          <p className="text-sm mt-1">Voeg medicijnen toe via het tabblad Beheer</p>
+          <p className="text-lg font-medium">
+            {medications.length === 0 ? 'Geen medicijnen' : 'Geen medicijnen gepland vandaag'}
+          </p>
+          <p className="text-sm mt-1">
+            {medications.length === 0
+              ? 'Voeg medicijnen toe via het tabblad Beheer'
+              : 'Vandaag hoef je geen medicijnen in te nemen'}
+          </p>
         </div>
       ) : (
         <div className="space-y-3">

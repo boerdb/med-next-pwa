@@ -1,10 +1,13 @@
-/** stockCount = totaal aantal doses (tabletten); dagen = doses / innames per dag */
+import { averageDosesPerDay } from './schedule';
+
+/** stockCount = totaal aantal doses (tabletten); dagen = doses / gemiddelde innames per dag */
 export function medicationDaysLeft(med: {
   stockCount: number | null;
   times: string[];
+  daysOfWeek?: number[] | null;
 }): number | null {
   if (med.stockCount === null || med.stockCount === undefined) return null;
-  const perDay = med.times.length;
+  const perDay = averageDosesPerDay(med);
   if (perDay <= 0) return null;
   return Math.floor(med.stockCount / perDay);
 }

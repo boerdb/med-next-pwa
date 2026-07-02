@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS medications (
   user_id CHAR(36) NOT NULL,
   name VARCHAR(255) NOT NULL,
   times JSON NOT NULL,
+  days_of_week JSON NULL,
   stock_count INT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_medications_user (user_id)
