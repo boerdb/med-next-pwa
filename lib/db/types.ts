@@ -1,6 +1,11 @@
+import type { DoseUnit } from '../dose';
+
 export type Medication = {
   id: string;
   name: string;
+  /** null = niet ingevuld */
+  doseAmount: number | null;
+  doseUnit: DoseUnit | null;
   times: string[];
   /** null = elke dag; anders gekozen weekdagen (0=zondag … 6=zaterdag) */
   daysOfWeek: number[] | null;

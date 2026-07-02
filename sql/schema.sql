@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS medications (
   id CHAR(36) PRIMARY KEY,
   user_id CHAR(36) NOT NULL,
   name VARCHAR(255) NOT NULL,
+  dose_amount DECIMAL(10, 3) NULL,
+  dose_unit VARCHAR(8) NULL,
   times JSON NOT NULL,
   days_of_week JSON NULL,
   stock_count INT NULL,

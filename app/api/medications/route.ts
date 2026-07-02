@@ -4,11 +4,14 @@ import { rowToMedication } from '@/lib/db/rows';
 import { requireSession, jsonError, jsonOk } from '@/lib/api/http';
 import { normalizeMedication } from '@/lib/utils';
 import { normalizeDaysOfWeek } from '@/lib/schedule';
+import { normalizeDose } from '@/lib/dose';
 import type { RowDataPacket } from 'mysql2';
 
 type MedRow = RowDataPacket & {
   id: string;
   name: string;
+  dose_amount: number | null;
+  dose_unit: string | null;
   times: string;
   days_of_week: string | null;
   stock_count: number | null;
@@ -21,7 +24,7 @@ export async function GET(req: NextRequest) {
   try {
     const pool = getPool();
     const [rows] = await pool.query<MedRow[]>(
-      'SELECT id, name, times, days_of_week, stock_count FROM medications WHERE user_id = ? ORDER BY name',
+      'SELECT id, name, dose_amount, dose_unit, times, days_of_week, stock_count FROM medications WHERE user_id = ? ORDER BY name',
       [session.userId],
     );
     const medications = rows.map((r) => normalizeMedication(rowToMedication(r)));
@@ -40,6 +43,8 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as {
       id?: string;
       name?: string;
+      doseAmount?: number | null;
+      doseUnit?: string | null;
       times?: string[];
       daysOfWeek?: number[] | null;
       stockCount?: number | null;
@@ -57,6 +62,8 @@ export async function POST(req: NextRequest) {
       return jsonError('Kies minimaal één dag per week.', 400);
     }
 
+    const { doseAmount, doseUnit } = normalizeDose(body);
+
     const stockCount =
       body.stockCount !== undefined && body.stockCount !== null
         ? Math.floor(Number(body.stockCount))
@@ -72,13 +79,13 @@ export async function POST(req: NextRequest) {
         return jsonError('Niet toegestaan.', 403);
       }
       await pool.query(
-        'UPDATE medications SET name = ?, times = ?, days_of_week = ?, stock_count = ? WHERE id = ? AND user_id = ?',
-        [name, JSON.stringify(times), daysOfWeek ? JSON.stringify(daysOfWeek) : null, stockCount, id, session.userId],
+        'UPDATE medications SET name = ?, dose_amount = ?, dose_unit = ?, times = ?, days_of_week = ?, stock_count = ? WHERE id = ? AND user_id = ?',
+        [name, doseAmount, doseUnit, JSON.stringify(times), daysOfWeek ? JSON.stringify(daysOfWeek) : null, stockCount, id, session.userId],
       );
     } else {
       await pool.query(
-        'INSERT INTO medications (id, user_id, name, times, days_of_week, stock_count) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, session.userId, name, JSON.stringify(times), daysOfWeek ? JSON.stringify(daysOfWeek) : null, stockCount],
+        'INSERT INTO medications (id, user_id, name, dose_amount, dose_unit, times, days_of_week, stock_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, session.userId, name, doseAmount, doseUnit, JSON.stringify(times), daysOfWeek ? JSON.stringify(daysOfWeek) : null, stockCount],
       );
     }
 

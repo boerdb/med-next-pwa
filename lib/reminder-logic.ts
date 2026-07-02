@@ -1,11 +1,15 @@
 import { parseScheduleMsInTimeZone } from './timezone';
 import { isMedicationDueOnDate } from './schedule';
+import { formatMedicationLabel } from './dose';
+import type { DoseUnit } from './dose';
 
 export type ReminderFlags = Record<string, { first?: boolean; second?: boolean }>;
 
 export type MedicationLite = {
   id: string;
   name: string;
+  doseAmount?: number | null;
+  doseUnit?: DoseUnit | null;
   times: string[];
   daysOfWeek?: number[] | null;
 };
@@ -65,7 +69,9 @@ export function runReminderTick(params: {
       .map((item) => [`${item.medicationId}::${item.time}`, item.status]),
   );
 
-  const medNameById = new Map(medications.map((m) => [m.id, m.name]));
+  const medNameById = new Map(
+    medications.map((m) => [m.id, formatMedicationLabel(m)]),
+  );
 
   for (const med of medications) {
     if (!isMedicationDueOnDate(med, dateKey)) continue;

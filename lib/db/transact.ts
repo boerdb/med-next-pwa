@@ -1,7 +1,7 @@
 import { notifyDataChanged } from './refresh';
 import type { LogEntry, Medication } from './types';
 
-type MedicationFields = Pick<Medication, 'name' | 'times' | 'daysOfWeek'> & {
+type MedicationFields = Pick<Medication, 'name' | 'times' | 'daysOfWeek' | 'doseAmount' | 'doseUnit'> & {
   stockCount?: number | null;
 };
 type LogEntryFields = Omit<LogEntry, 'id'>;

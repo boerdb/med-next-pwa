@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Check, Clock, AlertTriangle } from 'lucide-react';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
 import { medicationDaysLeft } from '@/lib/stock';
+import { formatMedicationLabel } from '@/lib/dose';
 import { cn, compareTimeHHMM } from '@/lib/utils';
 import type { Medication, LogEntry, Status } from '@/lib/db/types';
 
@@ -32,6 +33,8 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
     ),
   );
 
+  const displayName = formatMedicationLabel(medication);
+
   return (
     <div
       className={cn(
@@ -45,7 +48,7 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
       <div className="px-4 pt-4 pb-2 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-slate-800 dark:text-slate-100 truncate">
-            {medication.name}
+            {displayName}
           </h3>
           {isLowStock && (
             <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">
@@ -105,7 +108,7 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
 
               <ScheduleSlotActions
                 medicationId={medication.id}
-                medicationName={medication.name}
+                medicationName={displayName}
                 time={time}
                 status={status}
                 onLog={onLog}

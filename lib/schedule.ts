@@ -1,4 +1,5 @@
 import type { Medication, ScheduleRow } from './db/types';
+import { formatMedicationLabel } from './dose';
 import { compareTimeHHMM, parseDateKey } from './utils';
 
 /** JavaScript weekday: 0 = zondag … 6 = zaterdag */
@@ -71,7 +72,7 @@ export function getExpectedSlots(
       m.times.map((time) => ({
         id: `${m.id}-${time}`,
         medicationId: m.id,
-        medicationName: m.name,
+        medicationName: formatMedicationLabel(m),
         time,
       })),
     )

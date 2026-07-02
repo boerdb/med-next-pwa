@@ -116,6 +116,12 @@ async function showBundledReminderNotification(kind, dateKey, time, names) {
   });
 }
 
+function formatMedLabel(med) {
+  if (med.doseAmount == null || med.doseAmount === undefined) return med.name;
+  const unit = med.doseUnit || 'mg';
+  return `${med.name} ${med.doseAmount} ${unit}`;
+}
+
 async function checkReminders() {
   try {
     const cache = await caches.open('medtracker-data-v1');
@@ -157,12 +163,12 @@ async function checkReminders() {
         if (now >= dueMs + 5 * 60_000 && !entry.second) {
           updatedFlags[sk] = { first: true, second: true };
           const names = pendingSecond.get(time) ?? [];
-          names.push(med.name);
+          names.push(formatMedLabel(med));
           pendingSecond.set(time, names);
         } else if (now >= dueMs && now < dueMs + 5 * 60_000 && !entry.first) {
           updatedFlags[sk] = { ...entry, first: true };
           const names = pendingFirst.get(time) ?? [];
-          names.push(med.name);
+          names.push(formatMedLabel(med));
           pendingFirst.set(time, names);
         }
       }

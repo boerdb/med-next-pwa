@@ -1,3 +1,4 @@
+import { normalizeDose, type DoseUnit } from './dose';
 import { normalizeDaysOfWeek } from './schedule';
 
 /** Local date key (YYYY-MM-DD) using local timezone — avoids UTC midnight shift. */
@@ -32,16 +33,31 @@ export function uid(): string {
   return Math.random().toString(36).slice(2);
 }
 
-export function normalizeMedication<T extends { stockCount?: number | null | string; daysOfWeek?: unknown }>(
+export function normalizeMedication<
+  T extends {
+    stockCount?: number | null | string;
+    daysOfWeek?: unknown;
+    doseAmount?: unknown;
+    doseUnit?: unknown;
+  },
+>(
   raw: T,
-): T & { daysOfWeek: number[] | null; stockCount: number | null } {
+): T & {
+  daysOfWeek: number[] | null;
+  stockCount: number | null;
+  doseAmount: number | null;
+  doseUnit: DoseUnit | null;
+} {
   const parsed = Number(raw.stockCount);
   const stockCount =
     Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
+  const { doseAmount, doseUnit } = normalizeDose(raw);
   return {
     ...raw,
     stockCount,
     daysOfWeek: normalizeDaysOfWeek(raw.daysOfWeek),
+    doseAmount,
+    doseUnit,
   };
 }
 

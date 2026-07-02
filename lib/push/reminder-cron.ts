@@ -17,6 +17,8 @@ import { isPushConfigured, sendMedicationPush } from './web-push';
 type MedRow = RowDataPacket & {
   id: string;
   name: string;
+  dose_amount: number | null;
+  dose_unit: string | null;
   times: string;
   days_of_week: string | null;
   stock_count: number | null;
@@ -37,12 +39,19 @@ async function loadUserReminderData(userId: string): Promise<{
   const dateKey = toDateKeyInTimeZone(new Date(), APP_TIMEZONE);
 
   const [medRows] = await pool.query<MedRow[]>(
-    'SELECT id, name, times, days_of_week, stock_count FROM medications WHERE user_id = ?',
+    'SELECT id, name, dose_amount, dose_unit, times, days_of_week, stock_count FROM medications WHERE user_id = ?',
     [userId],
   );
   const medications: MedicationLite[] = medRows.map((r) => {
     const med = rowToMedication(r as MedRow & { stock_count: number | null });
-    return { id: med.id, name: med.name, times: med.times, daysOfWeek: med.daysOfWeek };
+    return {
+      id: med.id,
+      name: med.name,
+      doseAmount: med.doseAmount,
+      doseUnit: med.doseUnit,
+      times: med.times,
+      daysOfWeek: med.daysOfWeek,
+    };
   });
 
   const [logRows] = await pool.query<LogRow[]>(

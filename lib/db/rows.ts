@@ -1,9 +1,12 @@
+import { normalizeDose } from '../dose';
 import { normalizeDaysOfWeek } from '../schedule';
 import type { LogEntry, Medication } from './types';
 
 type MedicationRow = {
   id: string;
   name: string;
+  dose_amount?: number | string | null;
+  dose_unit?: string | null;
   times: string | string[];
   days_of_week?: string | number[] | null;
   stock_count: number | null;
@@ -30,9 +33,15 @@ export function rowToMedication(row: MedicationRow): Medication {
       daysRaw = null;
     }
   }
+  const { doseAmount, doseUnit } = normalizeDose({
+    doseAmount: row.dose_amount,
+    doseUnit: row.dose_unit,
+  });
   return {
     id: row.id,
     name: row.name,
+    doseAmount,
+    doseUnit,
     times,
     daysOfWeek: normalizeDaysOfWeek(daysRaw),
     stockCount: row.stock_count,

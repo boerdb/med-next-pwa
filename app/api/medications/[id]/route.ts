@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { getPool } from '@/lib/db/mysql';
 import { requireSession, jsonError, jsonOk } from '@/lib/api/http';
 import { normalizeDaysOfWeek } from '@/lib/schedule';
+import { normalizeDose } from '@/lib/dose';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 export async function DELETE(
@@ -41,6 +42,8 @@ export async function PUT(
   try {
     const body = (await req.json()) as {
       name?: string;
+      doseAmount?: number | null;
+      doseUnit?: string | null;
       times?: string[];
       daysOfWeek?: number[] | null;
       stockCount?: number | null;
@@ -57,6 +60,8 @@ export async function PUT(
       return jsonError('Kies minimaal één dag per week.', 400);
     }
 
+    const { doseAmount, doseUnit } = normalizeDose(body);
+
     const stockCount =
       body.stockCount !== undefined && body.stockCount !== null
         ? Math.floor(Number(body.stockCount))
@@ -72,8 +77,8 @@ export async function PUT(
     }
 
     await pool.query(
-      'UPDATE medications SET name = ?, times = ?, days_of_week = ?, stock_count = ? WHERE id = ? AND user_id = ?',
-      [name, JSON.stringify(times), daysOfWeek ? JSON.stringify(daysOfWeek) : null, stockCount, id, session.userId],
+      'UPDATE medications SET name = ?, dose_amount = ?, dose_unit = ?, times = ?, days_of_week = ?, stock_count = ? WHERE id = ? AND user_id = ?',
+      [name, doseAmount, doseUnit, JSON.stringify(times), daysOfWeek ? JSON.stringify(daysOfWeek) : null, stockCount, id, session.userId],
     );
 
     return jsonOk({ ok: true });
