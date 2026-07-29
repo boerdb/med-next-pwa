@@ -10,6 +10,8 @@ type MedicationRow = {
   times: string | string[];
   days_of_week?: string | number[] | null;
   stock_count: number | null;
+  course_start_date?: string | null;
+  course_days?: number | null;
 };
 
 type LogRow = {
@@ -45,6 +47,8 @@ export function rowToMedication(row: MedicationRow): Medication {
     times,
     daysOfWeek: normalizeDaysOfWeek(daysRaw),
     stockCount: row.stock_count,
+    courseStartDate: row.course_start_date ?? null,
+    courseDays: row.course_days ?? null,
   };
 }
 

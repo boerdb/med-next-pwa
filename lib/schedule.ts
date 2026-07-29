@@ -1,6 +1,11 @@
 import type { Medication, ScheduleRow } from './db/types';
 import { formatMedicationLabel } from './dose';
-import { compareTimeHHMM, parseDateKey } from './utils';
+import { compareTimeHHMM, parseDateKey, toLocalDateKey } from './utils';
+
+export type CourseFields = {
+  courseStartDate?: string | null;
+  courseDays?: number | null;
+};
 
 /** JavaScript weekday: 0 = zondag … 6 = zaterdag */
 export const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -40,10 +45,96 @@ export function getWeekdayFromDateKey(dateKey: string): number | null {
   return date.getDay();
 }
 
+export function normalizeCourse(raw: CourseFields): {
+  courseStartDate: string | null;
+  courseDays: number | null;
+} {
+  const start = raw.courseStartDate?.trim();
+  const daysRaw = raw.courseDays;
+  if (!start || daysRaw == null || daysRaw === undefined) {
+    return { courseStartDate: null, courseDays: null };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !parseDateKey(start)) {
+    return { courseStartDate: null, courseDays: null };
+  }
+  const days = Math.floor(Number(daysRaw));
+  if (!Number.isFinite(days) || days < 1 || days > 366) {
+    return { courseStartDate: null, courseDays: null };
+  }
+  return { courseStartDate: start, courseDays: days };
+}
+
+export function isCourseMedication(med: CourseFields): boolean {
+  return (
+    med.courseStartDate != null &&
+    med.courseDays != null &&
+    med.courseDays > 0
+  );
+}
+
+export function courseEndDate(med: CourseFields & { courseStartDate: string; courseDays: number }): string {
+  const start = parseDateKey(med.courseStartDate);
+  if (!start) return med.courseStartDate;
+  const end = new Date(start);
+  end.setDate(end.getDate() + med.courseDays - 1);
+  return toLocalDateKey(end);
+}
+
+export function isCourseCompleted(med: CourseFields, dateKey: string = toLocalDateKey()): boolean {
+  if (!isCourseMedication(med)) return false;
+  return dateKey > courseEndDate(med as CourseFields & { courseStartDate: string; courseDays: number });
+}
+
+export function courseDaysRemaining(
+  med: CourseFields,
+  dateKey: string = toLocalDateKey(),
+): number | null {
+  if (!isCourseMedication(med)) return null;
+  const end = courseEndDate(med as CourseFields & { courseStartDate: string; courseDays: number });
+  if (dateKey > end) return 0;
+  const endDate = parseDateKey(end);
+  const current = parseDateKey(dateKey);
+  if (!endDate || !current) return null;
+  return Math.floor((endDate.getTime() - current.getTime()) / 86_400_000) + 1;
+}
+
+export function courseDayNumber(med: CourseFields, dateKey: string): number | null {
+  if (!isCourseMedication(med)) return null;
+  const start = parseDateKey(med.courseStartDate!);
+  const current = parseDateKey(dateKey);
+  if (!start || !current) return null;
+  const dayNum = Math.floor((current.getTime() - start.getTime()) / 86_400_000) + 1;
+  if (dayNum < 1 || dayNum > med.courseDays!) return null;
+  return dayNum;
+}
+
+export function formatCourseDayLabel(med: CourseFields, dateKey: string): string | null {
+  const dayNum = courseDayNumber(med, dateKey);
+  if (dayNum === null) return null;
+  return `Kuur dag ${dayNum}/${med.courseDays}`;
+}
+
+export function formatCourseScheduleLabel(med: CourseFields): string | null {
+  if (!isCourseMedication(med)) return null;
+  return `Kuur ${med.courseDays} dagen`;
+}
+
+export function suggestedCourseStock(courseDays: number, timesCount: number): number {
+  return courseDays * timesCount;
+}
+
 export function isMedicationDueOnDate(
-  med: { daysOfWeek?: number[] | null },
+  med: { daysOfWeek?: number[] | null } & CourseFields,
   dateKey: string,
 ): boolean {
+  if (isCourseMedication(med)) {
+    if (dateKey < med.courseStartDate!) return false;
+    if (dateKey > courseEndDate(med as CourseFields & { courseStartDate: string; courseDays: number })) {
+      return false;
+    }
+    return true;
+  }
+
   const weekday = getWeekdayFromDateKey(dateKey);
   if (weekday === null) return false;
   return effectiveDaysOfWeek(med).includes(weekday);

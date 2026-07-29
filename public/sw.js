@@ -122,6 +122,27 @@ function formatMedLabel(med) {
   return `${med.name} ${med.doseAmount} ${unit}`;
 }
 
+function courseEndDateFrom(startDateKey, days) {
+  const [y, mo, d] = startDateKey.split('-').map(Number);
+  const end = new Date(y, mo - 1, d);
+  end.setDate(end.getDate() + days - 1);
+  const ey = end.getFullYear();
+  const em = String(end.getMonth() + 1).padStart(2, '0');
+  const ed = String(end.getDate()).padStart(2, '0');
+  return `${ey}-${em}-${ed}`;
+}
+
+function isMedDueOnDate(med, dateKey, weekday) {
+  if (med.courseStartDate && med.courseDays > 0) {
+    if (dateKey < med.courseStartDate) return false;
+    if (dateKey > courseEndDateFrom(med.courseStartDate, med.courseDays)) return false;
+    return true;
+  }
+  const days = med.daysOfWeek;
+  if (Array.isArray(days) && days.length > 0 && !days.includes(weekday)) return false;
+  return true;
+}
+
 async function checkReminders() {
   try {
     const cache = await caches.open('medtracker-data-v1');
@@ -146,8 +167,7 @@ async function checkReminders() {
     const weekday = date.getDay();
 
     for (const med of medications) {
-      const days = med.daysOfWeek;
-      if (Array.isArray(days) && days.length > 0 && !days.includes(weekday)) continue;
+      if (!isMedDueOnDate(med, dateKey, weekday)) continue;
 
       for (const time of med.times) {
         const logged = logs.some(

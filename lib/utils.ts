@@ -1,5 +1,5 @@
 import { normalizeDose, type DoseUnit } from './dose';
-import { normalizeDaysOfWeek } from './schedule';
+import { normalizeDaysOfWeek, normalizeCourse } from './schedule';
 
 /** Local date key (YYYY-MM-DD) using local timezone — avoids UTC midnight shift. */
 export function toLocalDateKey(date: Date = new Date()): string {
@@ -39,6 +39,8 @@ export function normalizeMedication<
     daysOfWeek?: unknown;
     doseAmount?: unknown;
     doseUnit?: unknown;
+    courseStartDate?: string | null;
+    courseDays?: number | null;
   },
 >(
   raw: T,
@@ -47,17 +49,22 @@ export function normalizeMedication<
   stockCount: number | null;
   doseAmount: number | null;
   doseUnit: DoseUnit | null;
+  courseStartDate: string | null;
+  courseDays: number | null;
 } {
   const parsed = Number(raw.stockCount);
   const stockCount =
     Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
   const { doseAmount, doseUnit } = normalizeDose(raw);
+  const course = normalizeCourse(raw);
   return {
     ...raw,
     stockCount,
     daysOfWeek: normalizeDaysOfWeek(raw.daysOfWeek),
     doseAmount,
     doseUnit,
+    courseStartDate: course.courseStartDate,
+    courseDays: course.courseDays,
   };
 }
 

@@ -10,6 +10,10 @@ export type Medication = {
   /** null = elke dag; anders gekozen weekdagen (0=zondag … 6=zaterdag) */
   daysOfWeek: number[] | null;
   stockCount: number | null;
+  /** Kuur: startdatum (YYYY-MM-DD); beide null = doorlopend */
+  courseStartDate: string | null;
+  /** Kuur: aantal dagen vanaf start (inclusief startdag) */
+  courseDays: number | null;
 };
 
 export type LogEntry = {

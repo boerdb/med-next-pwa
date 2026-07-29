@@ -23,6 +23,8 @@ CREATE TABLE IF NOT EXISTS medications (
   times JSON NOT NULL,
   days_of_week JSON NULL,
   stock_count INT NULL,
+  course_start_date CHAR(10) NULL,
+  course_days INT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_medications_user (user_id)
 ) ENGINE=InnoDB;

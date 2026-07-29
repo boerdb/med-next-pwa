@@ -16,8 +16,16 @@ import {
 } from '@/components/manage/MedicationTimesEditor';
 import { MedicationDaysEditor } from '@/components/manage/MedicationDaysEditor';
 import { MedicationDoseEditor } from '@/components/manage/MedicationDoseEditor';
-import { formatDaysOfWeekLabel } from '@/lib/schedule';
+import {
+  MedicationCourseEditor,
+  courseFieldsForSave,
+  defaultCourseDays,
+  defaultCourseStartDate,
+  readCourseFromMedication,
+} from '@/components/manage/MedicationCourseEditor';
+import { formatDaysOfWeekLabel, formatCourseScheduleLabel, isCourseCompleted } from '@/lib/schedule';
 import { formatMedicationLabel, normalizeDose, type DoseUnit } from '@/lib/dose';
+import { toLocalDateKey } from '@/lib/utils';
 
 function AddMedicationForm({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('');
@@ -25,6 +33,9 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
   const [doseUnit, setDoseUnit] = useState<DoseUnit>('mg');
   const [times, setTimes] = useState<string[]>([]);
   const [daysOfWeek, setDaysOfWeek] = useState<number[] | null>(null);
+  const [isCourse, setIsCourse] = useState(false);
+  const [courseStartDate, setCourseStartDate] = useState(defaultCourseStartDate());
+  const [courseDays, setCourseDays] = useState(defaultCourseDays());
   const [pendingTime, setPendingTime] = useState('');
   const [stock, setStock] = useState('');
   const [busy, setBusy] = useState(false);
@@ -47,13 +58,15 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
         doseUnit,
       });
       const id = uid();
+      const course = courseFieldsForSave(isCourse, courseStartDate, courseDays);
       await upsertMedication(id, {
         name: name.trim(),
         doseAmount: normalizedDose,
         doseUnit: normalizedUnit,
         times: allTimes,
-        daysOfWeek,
+        daysOfWeek: isCourse ? null : daysOfWeek,
         stockCount,
+        ...course,
       });
       onDone();
     } catch (e) {
@@ -87,6 +100,18 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
+      <MedicationCourseEditor
+        isCourse={isCourse}
+        courseStartDate={courseStartDate}
+        courseDays={courseDays}
+        timesCount={mergeMedicationTimes(times, pendingTime).length}
+        stockValue={stock}
+        onCourseModeChange={setIsCourse}
+        onStartDateChange={setCourseStartDate}
+        onCourseDaysChange={setCourseDays}
+        onSuggestStock={(n) => setStock(String(n))}
+      />
+
       {/* Stock */}
       <div>
         <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
@@ -113,7 +138,9 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
-      <MedicationDaysEditor daysOfWeek={daysOfWeek} onChange={setDaysOfWeek} />
+      {!isCourse && (
+        <MedicationDaysEditor daysOfWeek={daysOfWeek} onChange={setDaysOfWeek} />
+      )}
 
       <MedicationTimesEditor
         times={times}
@@ -159,6 +186,10 @@ function EditMedicationCard({
   const [doseUnit, setDoseUnit] = useState<DoseUnit>(medication.doseUnit ?? 'mg');
   const [times, setTimes] = useState<string[]>([...medication.times]);
   const [daysOfWeek, setDaysOfWeek] = useState<number[] | null>(medication.daysOfWeek);
+  const initialCourse = readCourseFromMedication(medication);
+  const [isCourse, setIsCourse] = useState(initialCourse.isCourse);
+  const [courseStartDate, setCourseStartDate] = useState(initialCourse.courseStartDate);
+  const [courseDays, setCourseDays] = useState(initialCourse.courseDays);
   const [pendingTime, setPendingTime] = useState('');
   const [stock, setStock] = useState(medication.stockCount !== null ? String(medication.stockCount) : '');
   const [busy, setBusy] = useState(false);
@@ -185,8 +216,9 @@ function EditMedicationCard({
         doseAmount: normalizedDose,
         doseUnit: normalizedUnit,
         times: allTimes,
-        daysOfWeek,
+        daysOfWeek: isCourse ? null : daysOfWeek,
         stockCount,
+        ...courseFieldsForSave(isCourse, courseStartDate, courseDays),
       });
       onDone();
     } finally {
@@ -217,6 +249,18 @@ function EditMedicationCard({
         />
       </div>
 
+      <MedicationCourseEditor
+        isCourse={isCourse}
+        courseStartDate={courseStartDate}
+        courseDays={courseDays}
+        timesCount={mergeMedicationTimes(times, pendingTime).length}
+        stockValue={stock}
+        onCourseModeChange={setIsCourse}
+        onStartDateChange={setCourseStartDate}
+        onCourseDaysChange={setCourseDays}
+        onSuggestStock={(n) => setStock(String(n))}
+      />
+
       {/* Stock */}
       <div className="flex gap-2 items-center flex-wrap">
         <input
@@ -238,7 +282,9 @@ function EditMedicationCard({
         ))}
       </div>
 
-      <MedicationDaysEditor daysOfWeek={daysOfWeek} onChange={setDaysOfWeek} />
+      {!isCourse && (
+        <MedicationDaysEditor daysOfWeek={daysOfWeek} onChange={setDaysOfWeek} />
+      )}
 
       <MedicationTimesEditor
         times={times}
@@ -279,6 +325,8 @@ function MedicationListCard({
 
   const daysLeft = medicationDaysLeft(medication);
   const isLow = daysLeft !== null && daysLeft <= 7;
+  const courseLabel = formatCourseScheduleLabel(medication);
+  const completed = isCourseCompleted(medication, toLocalDateKey());
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
@@ -291,9 +339,15 @@ function MedicationListCard({
             {formatMedicationLabel(medication)}
           </p>
           <div className="flex flex-wrap gap-1 mt-1">
-            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-medium rounded-full">
-              {formatDaysOfWeekLabel(medication.daysOfWeek)}
-            </span>
+            {courseLabel ? (
+              <span className={`px-2 py-0.5 text-[11px] font-medium rounded-full ${completed ? 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400' : 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'}`}>
+                {completed ? 'Kuur afgerond' : courseLabel}
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-medium rounded-full">
+                {formatDaysOfWeekLabel(medication.daysOfWeek)}
+              </span>
+            )}
             {medication.times.map((t) => (
               <span key={t} className="px-2 py-0.5 bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 text-[11px] font-mono rounded-full">
                 {t}

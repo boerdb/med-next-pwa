@@ -1,8 +1,11 @@
 import type { NextRequest } from 'next/server';
 import { getPool } from '@/lib/db/mysql';
 import { requireSession, jsonError, jsonOk } from '@/lib/api/http';
-import { normalizeDaysOfWeek } from '@/lib/schedule';
-import { normalizeDose } from '@/lib/dose';
+import {
+  MEDICATION_WRITE_FIELDS,
+  medicationWriteValues,
+  parseMedicationInput,
+} from '@/lib/api/medication-input';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 export async function DELETE(
@@ -47,25 +50,14 @@ export async function PUT(
       times?: string[];
       daysOfWeek?: number[] | null;
       stockCount?: number | null;
+      courseStartDate?: string | null;
+      courseDays?: number | null;
     };
-    const name = body.name?.trim();
-    const times = body.times;
 
-    if (!name || !Array.isArray(times) || times.length === 0) {
-      return jsonError('Ongeldige medicijngegevens.', 400);
+    const parsed = parseMedicationInput(body);
+    if (!parsed.ok) {
+      return jsonError(parsed.error, 400);
     }
-
-    const daysOfWeek = normalizeDaysOfWeek(body.daysOfWeek);
-    if (body.daysOfWeek !== undefined && body.daysOfWeek !== null && daysOfWeek === null) {
-      return jsonError('Kies minimaal één dag per week.', 400);
-    }
-
-    const { doseAmount, doseUnit } = normalizeDose(body);
-
-    const stockCount =
-      body.stockCount !== undefined && body.stockCount !== null
-        ? Math.floor(Number(body.stockCount))
-        : null;
 
     const pool = getPool();
     const [owned] = await pool.query<RowDataPacket[]>(
@@ -77,8 +69,8 @@ export async function PUT(
     }
 
     await pool.query(
-      'UPDATE medications SET name = ?, dose_amount = ?, dose_unit = ?, times = ?, days_of_week = ?, stock_count = ? WHERE id = ? AND user_id = ?',
-      [name, doseAmount, doseUnit, JSON.stringify(times), daysOfWeek ? JSON.stringify(daysOfWeek) : null, stockCount, id, session.userId],
+      `UPDATE medications SET ${MEDICATION_WRITE_FIELDS} WHERE id = ? AND user_id = ?`,
+      [...medicationWriteValues(parsed.data), id, session.userId],
     );
 
     return jsonOk({ ok: true });

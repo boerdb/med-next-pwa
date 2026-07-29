@@ -1,5 +1,6 @@
 import { getPool } from '@/lib/db/mysql';
 import { rowToLogEntry, rowToMedication } from '@/lib/db/rows';
+import { MEDICATION_SELECT } from '@/lib/api/medication-input';
 import { bundleReminderEvents } from '@/lib/reminder-bundle';
 import { runReminderTick, type LogLite, type MedicationLite } from '@/lib/reminder-logic';
 import { APP_TIMEZONE, toDateKeyInTimeZone } from '@/lib/timezone';
@@ -22,6 +23,8 @@ type MedRow = RowDataPacket & {
   times: string;
   days_of_week: string | null;
   stock_count: number | null;
+  course_start_date: string | null;
+  course_days: number | null;
 };
 
 type LogRow = RowDataPacket & {
@@ -39,7 +42,7 @@ async function loadUserReminderData(userId: string): Promise<{
   const dateKey = toDateKeyInTimeZone(new Date(), APP_TIMEZONE);
 
   const [medRows] = await pool.query<MedRow[]>(
-    'SELECT id, name, dose_amount, dose_unit, times, days_of_week, stock_count FROM medications WHERE user_id = ?',
+    `${MEDICATION_SELECT} WHERE user_id = ?`,
     [userId],
   );
   const medications: MedicationLite[] = medRows.map((r) => {
@@ -51,6 +54,8 @@ async function loadUserReminderData(userId: string): Promise<{
       doseUnit: med.doseUnit,
       times: med.times,
       daysOfWeek: med.daysOfWeek,
+      courseStartDate: med.courseStartDate,
+      courseDays: med.courseDays,
     };
   });
 

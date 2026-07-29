@@ -12,6 +12,8 @@ export type MedicationLite = {
   doseUnit?: DoseUnit | null;
   times: string[];
   daysOfWeek?: number[] | null;
+  courseStartDate?: string | null;
+  courseDays?: number | null;
 };
 export type LogLite = {
   medicationId: string;

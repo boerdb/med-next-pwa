@@ -5,6 +5,7 @@ import { Check, Clock, AlertTriangle } from 'lucide-react';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
 import { medicationDaysLeft } from '@/lib/stock';
 import { formatMedicationLabel } from '@/lib/dose';
+import { formatCourseDayLabel } from '@/lib/schedule';
 import { cn, compareTimeHHMM } from '@/lib/utils';
 import type { Medication, LogEntry, Status } from '@/lib/db/types';
 
@@ -21,8 +22,9 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
     [medication.times],
   );
 
-  const daysLeft = medicationDaysLeft(medication);
+  const daysLeft = medicationDaysLeft(medication, todayKey);
   const isLowStock = daysLeft !== null && daysLeft <= 7;
+  const courseDayLabel = formatCourseDayLabel(medication, todayKey);
 
   const allDone = timesSorted.every((time) =>
     logs.some(
@@ -50,6 +52,11 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
           <h3 className="font-semibold text-slate-800 dark:text-slate-100 truncate">
             {displayName}
           </h3>
+          {courseDayLabel && (
+            <span className="inline-flex items-center mt-0.5 text-[10px] font-medium bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-full">
+              {courseDayLabel}
+            </span>
+          )}
           {isLowStock && (
             <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-full">
               <AlertTriangle className="w-2.5 h-2.5" />
