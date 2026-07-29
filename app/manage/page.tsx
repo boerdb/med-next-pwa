@@ -23,7 +23,7 @@ import {
   defaultCourseStartDate,
   readCourseFromMedication,
 } from '@/components/manage/MedicationCourseEditor';
-import { formatDaysOfWeekLabel, formatCourseScheduleLabel, isCourseCompleted } from '@/lib/schedule';
+import { formatDaysOfWeekLabel, formatCourseScheduleLabel, isCourseCompleted, isCourseMedication } from '@/lib/schedule';
 import { formatMedicationLabel, normalizeDose, type DoseUnit } from '@/lib/dose';
 import { toLocalDateKey } from '@/lib/utils';
 
@@ -324,7 +324,8 @@ function MedicationListCard({
   }
 
   const daysLeft = medicationDaysLeft(medication);
-  const isLow = daysLeft !== null && daysLeft <= 7;
+  const isCourse = isCourseMedication(medication);
+  const isLow = !isCourse && daysLeft !== null && daysLeft <= 7;
   const courseLabel = formatCourseScheduleLabel(medication);
   const completed = isCourseCompleted(medication, toLocalDateKey());
 
@@ -356,9 +357,14 @@ function MedicationListCard({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {medication.stockCount !== null && (
+          {medication.stockCount !== null && !isCourse && (
             <span className={`text-xs font-medium px-2 py-1 rounded-lg ${isLow ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
               {daysLeft !== null ? `${daysLeft}d` : `${medication.stockCount}st`}
+            </span>
+          )}
+          {medication.stockCount !== null && isCourse && (
+            <span className="text-xs font-medium px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
+              {medication.stockCount} pillen
             </span>
           )}
           {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}

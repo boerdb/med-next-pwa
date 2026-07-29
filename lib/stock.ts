@@ -1,7 +1,7 @@
-import { averageDosesPerDay, courseDaysRemaining, isCourseMedication } from './schedule';
+import { averageDosesPerDay, isCourseMedication } from './schedule';
 import { toLocalDateKey } from './utils';
 
-/** stockCount = totaal aantal doses (tabletten); dagen = doses / gemiddelde innames per dag */
+/** Voorraad in dagen — alleen voor doorlopende medicatie, niet voor kuren. */
 export function medicationDaysLeft(
   med: {
     stockCount: number | null;
@@ -10,25 +10,13 @@ export function medicationDaysLeft(
     courseStartDate?: string | null;
     courseDays?: number | null;
   },
-  dateKey: string = toLocalDateKey(),
+  _dateKey: string = toLocalDateKey(),
 ): number | null {
-  const courseRemaining = courseDaysRemaining(med, dateKey);
-
-  let stockBased: number | null = null;
-  if (med.stockCount !== null && med.stockCount !== undefined) {
-    const perDay = isCourseMedication(med)
-      ? med.times.length
-      : averageDosesPerDay(med);
-    if (perDay > 0) {
-      stockBased = Math.floor(med.stockCount / perDay);
-    }
-  }
-
-  if (courseRemaining !== null) {
-    if (stockBased === null) return courseRemaining;
-    return Math.min(stockBased, courseRemaining);
-  }
-  return stockBased;
+  if (isCourseMedication(med)) return null;
+  if (med.stockCount === null || med.stockCount === undefined) return null;
+  const perDay = averageDosesPerDay(med);
+  if (perDay <= 0) return null;
+  return Math.floor(med.stockCount / perDay);
 }
 
 /** Delta voor stock_count bij statuswijziging van een slot. */

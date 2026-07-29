@@ -28,6 +28,7 @@ import {
 import { getPushBlockReason, pushBlockMessage } from '@/lib/pwa-capabilities';
 import { medicationDaysLeft } from '@/lib/stock';
 import { toLocalDateKey } from '@/lib/utils';
+import { isCourseMedication } from '@/lib/schedule';
 import type { Medication, LogEntry } from '@/lib/db/types';
 
 function parseJson<T>(value: string | null, fallback: T): T {
@@ -165,6 +166,7 @@ export function useNotifications(
     if (!enabled || !dataReady) return;
     const dateKey = toLocalDateKey();
     medications.forEach((med) => {
+      if (isCourseMedication(med)) return;
       const daysLeft = medicationDaysLeft(med);
       if (daysLeft !== null && daysLeft <= LOW_STOCK_THRESHOLD) {
         showLowStockNotification(dateKey, med.name, daysLeft);

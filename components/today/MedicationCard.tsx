@@ -5,7 +5,7 @@ import { Check, Clock, AlertTriangle } from 'lucide-react';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
 import { medicationDaysLeft } from '@/lib/stock';
 import { formatMedicationLabel } from '@/lib/dose';
-import { formatCourseDayLabel } from '@/lib/schedule';
+import { formatCourseDayLabel, isCourseMedication } from '@/lib/schedule';
 import { cn, compareTimeHHMM } from '@/lib/utils';
 import type { Medication, LogEntry, Status } from '@/lib/db/types';
 
@@ -23,7 +23,8 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
   );
 
   const daysLeft = medicationDaysLeft(medication, todayKey);
-  const isLowStock = daysLeft !== null && daysLeft <= 7;
+  const isCourse = isCourseMedication(medication);
+  const isLowStock = !isCourse && daysLeft !== null && daysLeft <= 7;
   const courseDayLabel = formatCourseDayLabel(medication, todayKey);
 
   const allDone = timesSorted.every((time) =>
@@ -64,7 +65,7 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
             </span>
           )}
         </div>
-        {daysLeft !== null && !isLowStock && (
+        {daysLeft !== null && !isLowStock && !isCourse && (
           <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 flex-shrink-0">
             {daysLeft}d voorraad
           </span>
