@@ -3,7 +3,14 @@ import type { LogEntry, Medication } from './types';
 
 type MedicationFields = Pick<
   Medication,
-  'name' | 'times' | 'daysOfWeek' | 'doseAmount' | 'doseUnit' | 'courseStartDate' | 'courseDays'
+  | 'name'
+  | 'times'
+  | 'daysOfWeek'
+  | 'doseAmount'
+  | 'doseUnit'
+  | 'courseStartDate'
+  | 'courseDays'
+  | 'asNeeded'
 > & {
   stockCount?: number | null;
 };

@@ -14,6 +14,8 @@ export type Medication = {
   courseStartDate: string | null;
   /** Kuur: aantal dagen vanaf start (inclusief startdag) */
   courseDays: number | null;
+  /** Zo nodig: geen schema, herinneringen of gemiste doses */
+  asNeeded: boolean;
 };
 
 export type LogEntry = {
@@ -46,6 +48,7 @@ export type HistoryDayGroup = {
   takenCount: number;
   skippedCount: number;
   expectedCount: number;
+  asNeededEntries: LogEntry[];
   allTaken: boolean;
   /** Every scheduled slot has taken or skipped (nothing missed). */
   isComplete: boolean;

@@ -21,9 +21,9 @@ import {
   courseFieldsForSave,
   defaultCourseDays,
   defaultCourseStartDate,
-  readCourseFromMedication,
+  readScheduleKind,
 } from '@/components/manage/MedicationCourseEditor';
-import { formatDaysOfWeekLabel, formatCourseScheduleLabel, isCourseCompleted, isCourseMedication } from '@/lib/schedule';
+import { formatDaysOfWeekLabel, formatCourseScheduleLabel, isCourseCompleted, isCourseMedication, isAsNeededMedication, type MedicationScheduleKind } from '@/lib/schedule';
 import { formatMedicationLabel, normalizeDose, type DoseUnit } from '@/lib/dose';
 import { toLocalDateKey } from '@/lib/utils';
 
@@ -33,7 +33,7 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
   const [doseUnit, setDoseUnit] = useState<DoseUnit>('mg');
   const [times, setTimes] = useState<string[]>([]);
   const [daysOfWeek, setDaysOfWeek] = useState<number[] | null>(null);
-  const [isCourse, setIsCourse] = useState(false);
+  const [kind, setKind] = useState<MedicationScheduleKind>('ongoing');
   const [courseStartDate, setCourseStartDate] = useState(defaultCourseStartDate());
   const [courseDays, setCourseDays] = useState(defaultCourseDays());
   const [pendingTime, setPendingTime] = useState('');
@@ -42,9 +42,13 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
-    const allTimes = mergeMedicationTimes(times, pendingTime);
-    if (!name.trim() || allTimes.length === 0) {
-      setError('Vul een medicijnnaam in en voeg minimaal één innametijd toe (knop Toevoegen of snelkiezen).');
+    const allTimes = kind === 'asNeeded' ? [] : mergeMedicationTimes(times, pendingTime);
+    if (!name.trim() || (kind !== 'asNeeded' && allTimes.length === 0)) {
+      setError(
+        kind === 'asNeeded'
+          ? 'Vul een medicijnnaam in.'
+          : 'Vul een medicijnnaam in en voeg minimaal één innametijd toe (knop Toevoegen of snelkiezen).',
+      );
       return;
     }
     setBusy(true);
@@ -58,13 +62,13 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
         doseUnit,
       });
       const id = uid();
-      const course = courseFieldsForSave(isCourse, courseStartDate, courseDays);
+      const course = courseFieldsForSave(kind, courseStartDate, courseDays);
       await upsertMedication(id, {
         name: name.trim(),
         doseAmount: normalizedDose,
         doseUnit: normalizedUnit,
         times: allTimes,
-        daysOfWeek: isCourse ? null : daysOfWeek,
+        daysOfWeek: kind === 'ongoing' ? daysOfWeek : null,
         stockCount,
         ...course,
       });
@@ -101,12 +105,12 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
       </div>
 
       <MedicationCourseEditor
-        isCourse={isCourse}
+        kind={kind}
         courseStartDate={courseStartDate}
         courseDays={courseDays}
         timesCount={mergeMedicationTimes(times, pendingTime).length}
         stockValue={stock}
-        onCourseModeChange={setIsCourse}
+        onKindChange={setKind}
         onStartDateChange={setCourseStartDate}
         onCourseDaysChange={setCourseDays}
         onSuggestStock={(n) => setStock(String(n))}
@@ -138,15 +142,17 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
 
-      {!isCourse && (
+      {kind === 'ongoing' && (
         <MedicationDaysEditor daysOfWeek={daysOfWeek} onChange={setDaysOfWeek} />
       )}
 
-      <MedicationTimesEditor
-        times={times}
-        onChange={setTimes}
-        onPendingTimeChange={setPendingTime}
-      />
+      {kind !== 'asNeeded' && (
+        <MedicationTimesEditor
+          times={times}
+          onChange={setTimes}
+          onPendingTimeChange={setPendingTime}
+        />
+      )}
 
       {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
 
@@ -186,19 +192,20 @@ function EditMedicationCard({
   const [doseUnit, setDoseUnit] = useState<DoseUnit>(medication.doseUnit ?? 'mg');
   const [times, setTimes] = useState<string[]>([...medication.times]);
   const [daysOfWeek, setDaysOfWeek] = useState<number[] | null>(medication.daysOfWeek);
-  const initialCourse = readCourseFromMedication(medication);
-  const [isCourse, setIsCourse] = useState(initialCourse.isCourse);
-  const [courseStartDate, setCourseStartDate] = useState(initialCourse.courseStartDate);
-  const [courseDays, setCourseDays] = useState(initialCourse.courseDays);
+  const [kind, setKind] = useState<MedicationScheduleKind>(readScheduleKind(medication));
+  const [courseStartDate, setCourseStartDate] = useState(
+    medication.courseStartDate ?? defaultCourseStartDate(),
+  );
+  const [courseDays, setCourseDays] = useState(medication.courseDays ?? defaultCourseDays());
   const [pendingTime, setPendingTime] = useState('');
   const [stock, setStock] = useState(medication.stockCount !== null ? String(medication.stockCount) : '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const save = async () => {
-    const allTimes = mergeMedicationTimes(times, pendingTime);
-    if (!name.trim() || allTimes.length === 0) {
-      setError('Vul een naam in en minimaal één innametijd.');
+    const allTimes = kind === 'asNeeded' ? [] : mergeMedicationTimes(times, pendingTime);
+    if (!name.trim() || (kind !== 'asNeeded' && allTimes.length === 0)) {
+      setError(kind === 'asNeeded' ? 'Vul een naam in.' : 'Vul een naam in en minimaal één innametijd.');
       return;
     }
     setBusy(true);
@@ -216,9 +223,9 @@ function EditMedicationCard({
         doseAmount: normalizedDose,
         doseUnit: normalizedUnit,
         times: allTimes,
-        daysOfWeek: isCourse ? null : daysOfWeek,
+        daysOfWeek: kind === 'ongoing' ? daysOfWeek : null,
         stockCount,
-        ...courseFieldsForSave(isCourse, courseStartDate, courseDays),
+        ...courseFieldsForSave(kind, courseStartDate, courseDays),
       });
       onDone();
     } finally {
@@ -250,12 +257,12 @@ function EditMedicationCard({
       </div>
 
       <MedicationCourseEditor
-        isCourse={isCourse}
+        kind={kind}
         courseStartDate={courseStartDate}
         courseDays={courseDays}
         timesCount={mergeMedicationTimes(times, pendingTime).length}
         stockValue={stock}
-        onCourseModeChange={setIsCourse}
+        onKindChange={setKind}
         onStartDateChange={setCourseStartDate}
         onCourseDaysChange={setCourseDays}
         onSuggestStock={(n) => setStock(String(n))}
@@ -282,15 +289,17 @@ function EditMedicationCard({
         ))}
       </div>
 
-      {!isCourse && (
+      {kind === 'ongoing' && (
         <MedicationDaysEditor daysOfWeek={daysOfWeek} onChange={setDaysOfWeek} />
       )}
 
-      <MedicationTimesEditor
-        times={times}
-        onChange={setTimes}
-        onPendingTimeChange={setPendingTime}
-      />
+      {kind !== 'asNeeded' && (
+        <MedicationTimesEditor
+          times={times}
+          onChange={setTimes}
+          onPendingTimeChange={setPendingTime}
+        />
+      )}
 
       {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
 
@@ -325,7 +334,8 @@ function MedicationListCard({
 
   const daysLeft = medicationDaysLeft(medication);
   const isCourse = isCourseMedication(medication);
-  const isLow = !isCourse && daysLeft !== null && daysLeft <= 7;
+  const isAsNeeded = isAsNeededMedication(medication);
+  const isLow = !isCourse && !isAsNeeded && daysLeft !== null && daysLeft <= 7;
   const courseLabel = formatCourseScheduleLabel(medication);
   const completed = isCourseCompleted(medication, toLocalDateKey());
 
@@ -340,7 +350,11 @@ function MedicationListCard({
             {formatMedicationLabel(medication)}
           </p>
           <div className="flex flex-wrap gap-1 mt-1">
-            {courseLabel ? (
+            {isAsNeeded ? (
+              <span className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
+                Zo nodig
+              </span>
+            ) : courseLabel ? (
               <span className={`px-2 py-0.5 text-[11px] font-medium rounded-full ${completed ? 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400' : 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'}`}>
                 {completed ? 'Kuur afgerond' : courseLabel}
               </span>
@@ -357,12 +371,12 @@ function MedicationListCard({
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {medication.stockCount !== null && !isCourse && (
+          {medication.stockCount !== null && !isCourse && !isAsNeeded && (
             <span className={`text-xs font-medium px-2 py-1 rounded-lg ${isLow ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
               {daysLeft !== null ? `${daysLeft}d` : `${medication.stockCount}st`}
             </span>
           )}
-          {medication.stockCount !== null && isCourse && (
+          {medication.stockCount !== null && (isCourse || isAsNeeded) && (
             <span className="text-xs font-medium px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
               {medication.stockCount} pillen
             </span>

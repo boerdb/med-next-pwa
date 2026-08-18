@@ -1,5 +1,5 @@
 import { normalizeDose } from '../dose';
-import { normalizeDaysOfWeek } from '../schedule';
+import { isAsNeededMedication, normalizeDaysOfWeek } from '../schedule';
 import type { LogEntry, Medication } from './types';
 
 type MedicationRow = {
@@ -12,6 +12,7 @@ type MedicationRow = {
   stock_count: number | null;
   course_start_date?: string | null;
   course_days?: number | null;
+  as_needed?: number | boolean | null;
 };
 
 type LogRow = {
@@ -49,6 +50,7 @@ export function rowToMedication(row: MedicationRow): Medication {
     stockCount: row.stock_count,
     courseStartDate: row.course_start_date ?? null,
     courseDays: row.course_days ?? null,
+    asNeeded: isAsNeededMedication({ asNeeded: row.as_needed }),
   };
 }
 

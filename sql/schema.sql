@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS medications (
   stock_count INT NULL,
   course_start_date CHAR(10) NULL,
   course_days INT NULL,
+  as_needed TINYINT(1) NOT NULL DEFAULT 0,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_medications_user (user_id)
 ) ENGINE=InnoDB;

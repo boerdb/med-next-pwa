@@ -7,6 +7,12 @@ export type CourseFields = {
   courseDays?: number | null;
 };
 
+export type AsNeededFields = {
+  asNeeded?: boolean | number | null;
+};
+
+export type MedicationScheduleKind = 'ongoing' | 'course' | 'asNeeded';
+
 /** JavaScript weekday: 0 = zondag … 6 = zaterdag */
 export const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
@@ -72,6 +78,18 @@ export function isCourseMedication(med: CourseFields): boolean {
   );
 }
 
+export function isAsNeededMedication(med: AsNeededFields): boolean {
+  return med.asNeeded === true || med.asNeeded === 1;
+}
+
+export function medicationScheduleKind(
+  med: CourseFields & AsNeededFields,
+): MedicationScheduleKind {
+  if (isAsNeededMedication(med)) return 'asNeeded';
+  if (isCourseMedication(med)) return 'course';
+  return 'ongoing';
+}
+
 export function courseEndDate(med: CourseFields & { courseStartDate: string; courseDays: number }): string {
   const start = parseDateKey(med.courseStartDate);
   if (!start) return med.courseStartDate;
@@ -124,9 +142,10 @@ export function suggestedCourseStock(courseDays: number, timesCount: number): nu
 }
 
 export function isMedicationDueOnDate(
-  med: { daysOfWeek?: number[] | null } & CourseFields,
+  med: { daysOfWeek?: number[] | null } & CourseFields & AsNeededFields,
   dateKey: string,
 ): boolean {
+  if (isAsNeededMedication(med)) return true;
   if (isCourseMedication(med)) {
     if (dateKey < med.courseStartDate!) return false;
     if (dateKey > courseEndDate(med as CourseFields & { courseStartDate: string; courseDays: number })) {
@@ -158,7 +177,7 @@ export function getExpectedSlots(
   dateKey: string,
 ): ScheduleRow[] {
   return medications
-    .filter((m) => isMedicationDueOnDate(m, dateKey))
+    .filter((m) => !isAsNeededMedication(m) && isMedicationDueOnDate(m, dateKey))
     .flatMap((m) =>
       m.times.map((time) => ({
         id: `${m.id}-${time}`,

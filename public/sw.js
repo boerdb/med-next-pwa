@@ -167,6 +167,7 @@ async function checkReminders() {
     const weekday = date.getDay();
 
     for (const med of medications) {
+      if (med.asNeeded) continue;
       if (!isMedDueOnDate(med, dateKey, weekday)) continue;
 
       for (const time of med.times) {

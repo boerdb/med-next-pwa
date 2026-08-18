@@ -1,5 +1,5 @@
 import { parseScheduleMsInTimeZone } from './timezone';
-import { isMedicationDueOnDate } from './schedule';
+import { isAsNeededMedication, isMedicationDueOnDate } from './schedule';
 import { formatMedicationLabel } from './dose';
 import type { DoseUnit } from './dose';
 
@@ -14,6 +14,7 @@ export type MedicationLite = {
   daysOfWeek?: number[] | null;
   courseStartDate?: string | null;
   courseDays?: number | null;
+  asNeeded?: boolean;
 };
 export type LogLite = {
   medicationId: string;
@@ -76,6 +77,7 @@ export function runReminderTick(params: {
   );
 
   for (const med of medications) {
+    if (isAsNeededMedication(med)) continue;
     if (!isMedicationDueOnDate(med, dateKey)) continue;
 
     for (const time of med.times) {

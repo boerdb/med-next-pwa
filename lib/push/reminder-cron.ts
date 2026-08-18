@@ -56,6 +56,7 @@ async function loadUserReminderData(userId: string): Promise<{
       daysOfWeek: med.daysOfWeek,
       courseStartDate: med.courseStartDate,
       courseDays: med.courseDays,
+      asNeeded: med.asNeeded,
     };
   });
 

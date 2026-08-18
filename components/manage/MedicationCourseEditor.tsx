@@ -1,15 +1,15 @@
 'use client';
 
 import { cn, toLocalDateKey } from '@/lib/utils';
-import { suggestedCourseStock } from '@/lib/schedule';
+import { suggestedCourseStock, type MedicationScheduleKind } from '@/lib/schedule';
 
 type Props = {
-  isCourse: boolean;
+  kind: MedicationScheduleKind;
   courseStartDate: string;
   courseDays: number;
   timesCount: number;
   stockValue: string;
-  onCourseModeChange: (isCourse: boolean) => void;
+  onKindChange: (kind: MedicationScheduleKind) => void;
   onStartDateChange: (date: string) => void;
   onCourseDaysChange: (days: number) => void;
   onSuggestStock: (stock: number) => void;
@@ -17,17 +17,24 @@ type Props = {
 
 const QUICK_DURATIONS = [5, 7, 10, 14] as const;
 
+const KIND_OPTIONS: { value: MedicationScheduleKind; label: string }[] = [
+  { value: 'ongoing', label: 'Doorlopend' },
+  { value: 'course', label: 'Kuur' },
+  { value: 'asNeeded', label: 'Zo nodig' },
+];
+
 export function MedicationCourseEditor({
-  isCourse,
+  kind,
   courseStartDate,
   courseDays,
   timesCount,
   stockValue,
-  onCourseModeChange,
+  onKindChange,
   onStartDateChange,
   onCourseDaysChange,
   onSuggestStock,
 }: Props) {
+  const isCourse = kind === 'course';
   const suggestedStock = suggestedCourseStock(courseDays, timesCount);
   const stockNum = Number(stockValue);
   const showStockHint =
@@ -42,32 +49,29 @@ export function MedicationCourseEditor({
         Type
       </label>
 
-      <div className="flex gap-2 mb-3">
-        <button
-          type="button"
-          onClick={() => onCourseModeChange(false)}
-          className={cn(
-            'flex-1 py-2 text-sm font-semibold rounded-xl border transition-colors',
-            !isCourse
-              ? 'bg-teal-600 text-white border-teal-600'
-              : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600',
-          )}
-        >
-          Doorlopend
-        </button>
-        <button
-          type="button"
-          onClick={() => onCourseModeChange(true)}
-          className={cn(
-            'flex-1 py-2 text-sm font-semibold rounded-xl border transition-colors',
-            isCourse
-              ? 'bg-teal-600 text-white border-teal-600'
-              : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600',
-          )}
-        >
-          Kuur
-        </button>
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {KIND_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onKindChange(option.value)}
+            className={cn(
+              'py-2 px-1 text-sm font-semibold rounded-xl border transition-colors',
+              kind === option.value
+                ? 'bg-teal-600 text-white border-teal-600'
+                : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600',
+            )}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
+
+      {kind === 'asNeeded' && (
+        <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">
+          Alleen innemen als het nodig is. Geen vaste tijden, herinneringen of gemiste doses.
+        </p>
+      )}
 
       {isCourse && (
         <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
@@ -141,25 +145,26 @@ export function defaultCourseDays(): number {
   return 7;
 }
 
-export function readCourseFromMedication(med: {
+export function readScheduleKind(med: {
+  asNeeded: boolean;
   courseStartDate: string | null;
   courseDays: number | null;
-}): { isCourse: boolean; courseStartDate: string; courseDays: number } {
-  const isCourse = med.courseStartDate != null && med.courseDays != null && med.courseDays > 0;
-  return {
-    isCourse,
-    courseStartDate: med.courseStartDate ?? defaultCourseStartDate(),
-    courseDays: med.courseDays ?? defaultCourseDays(),
-  };
+}): MedicationScheduleKind {
+  if (med.asNeeded) return 'asNeeded';
+  if (med.courseStartDate != null && med.courseDays != null && med.courseDays > 0) return 'course';
+  return 'ongoing';
 }
 
 export function courseFieldsForSave(
-  isCourse: boolean,
+  kind: MedicationScheduleKind,
   courseStartDate: string,
   courseDays: number,
-): { courseStartDate: string | null; courseDays: number | null } {
-  if (!isCourse) {
-    return { courseStartDate: null, courseDays: null };
+): { courseStartDate: string | null; courseDays: number | null; asNeeded: boolean } {
+  if (kind === 'asNeeded') {
+    return { courseStartDate: null, courseDays: null, asNeeded: true };
   }
-  return { courseStartDate, courseDays };
+  if (kind === 'course') {
+    return { courseStartDate, courseDays, asNeeded: false };
+  }
+  return { courseStartDate: null, courseDays: null, asNeeded: false };
 }

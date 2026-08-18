@@ -1,5 +1,5 @@
 import { normalizeDose } from '@/lib/dose';
-import { normalizeCourse, normalizeDaysOfWeek } from '@/lib/schedule';
+import { isAsNeededMedication, normalizeCourse, normalizeDaysOfWeek } from '@/lib/schedule';
 
 export type ParsedMedicationInput = {
   name: string;
@@ -10,6 +10,7 @@ export type ParsedMedicationInput = {
   stockCount: number | null;
   courseStartDate: string | null;
   courseDays: number | null;
+  asNeeded: boolean;
 };
 
 export function parseMedicationInput(body: {
@@ -21,12 +22,39 @@ export function parseMedicationInput(body: {
   stockCount?: number | null;
   courseStartDate?: string | null;
   courseDays?: number | null;
+  asNeeded?: boolean | number | null;
 }): { ok: true; data: ParsedMedicationInput } | { ok: false; error: string } {
   const name = body.name?.trim();
-  const times = body.times;
+  const asNeeded = isAsNeededMedication({ asNeeded: body.asNeeded });
+  const times = Array.isArray(body.times) ? body.times : [];
 
-  if (!name || !Array.isArray(times) || times.length === 0) {
+  if (!name) {
     return { ok: false, error: 'Ongeldige medicijngegevens.' };
+  }
+  if (!asNeeded && times.length === 0) {
+    return { ok: false, error: 'Ongeldige medicijngegevens.' };
+  }
+
+  if (asNeeded) {
+    const stockCount =
+      body.stockCount !== undefined && body.stockCount !== null
+        ? Math.floor(Number(body.stockCount))
+        : null;
+    const { doseAmount, doseUnit } = normalizeDose(body);
+    return {
+      ok: true,
+      data: {
+        name,
+        doseAmount,
+        doseUnit,
+        times: [],
+        daysOfWeek: null,
+        stockCount,
+        courseStartDate: null,
+        courseDays: null,
+        asNeeded: true,
+      },
+    };
   }
 
   const course = normalizeCourse(body);
@@ -63,15 +91,16 @@ export function parseMedicationInput(body: {
       stockCount,
       courseStartDate: course.courseStartDate,
       courseDays: course.courseDays,
+      asNeeded: false,
     },
   };
 }
 
 export const MEDICATION_SELECT =
-  'SELECT id, name, dose_amount, dose_unit, times, days_of_week, stock_count, course_start_date, course_days FROM medications';
+  'SELECT id, name, dose_amount, dose_unit, times, days_of_week, stock_count, course_start_date, course_days, as_needed FROM medications';
 
 export const MEDICATION_WRITE_FIELDS =
-  'name = ?, dose_amount = ?, dose_unit = ?, times = ?, days_of_week = ?, stock_count = ?, course_start_date = ?, course_days = ?';
+  'name = ?, dose_amount = ?, dose_unit = ?, times = ?, days_of_week = ?, stock_count = ?, course_start_date = ?, course_days = ?, as_needed = ?';
 
 export function medicationWriteValues(data: ParsedMedicationInput): unknown[] {
   return [
@@ -83,5 +112,6 @@ export function medicationWriteValues(data: ParsedMedicationInput): unknown[] {
     data.stockCount,
     data.courseStartDate,
     data.courseDays,
+    data.asNeeded ? 1 : 0,
   ];
 }

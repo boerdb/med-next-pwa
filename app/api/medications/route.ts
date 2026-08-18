@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       stockCount?: number | null;
       courseStartDate?: string | null;
       courseDays?: number | null;
+      asNeeded?: boolean | number | null;
     };
     const id = body.id;
     if (!id) {
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
       );
     } else {
       await pool.query(
-        'INSERT INTO medications (id, user_id, name, dose_amount, dose_unit, times, days_of_week, stock_count, course_start_date, course_days) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO medications (id, user_id, name, dose_amount, dose_unit, times, days_of_week, stock_count, course_start_date, course_days, as_needed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         [id, session.userId, ...values],
       );
     }

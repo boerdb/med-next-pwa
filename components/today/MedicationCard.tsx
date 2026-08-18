@@ -5,8 +5,8 @@ import { Check, Clock, AlertTriangle } from 'lucide-react';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
 import { medicationDaysLeft } from '@/lib/stock';
 import { formatMedicationLabel } from '@/lib/dose';
-import { formatCourseDayLabel, isCourseMedication } from '@/lib/schedule';
-import { cn, compareTimeHHMM } from '@/lib/utils';
+import { formatCourseDayLabel, isAsNeededMedication, isCourseMedication } from '@/lib/schedule';
+import { cn, compareTimeHHMM, nextUnusedTimeHHMM } from '@/lib/utils';
 import type { Medication, LogEntry, Status } from '@/lib/db/types';
 
 interface MedicationCardProps {
@@ -24,19 +24,37 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
 
   const daysLeft = medicationDaysLeft(medication, todayKey);
   const isCourse = isCourseMedication(medication);
-  const isLowStock = !isCourse && daysLeft !== null && daysLeft <= 7;
+  const isAsNeeded = isAsNeededMedication(medication);
+  const isLowStock = !isCourse && !isAsNeeded && daysLeft !== null && daysLeft <= 7;
   const courseDayLabel = formatCourseDayLabel(medication, todayKey);
 
-  const allDone = timesSorted.every((time) =>
-    logs.some(
-      (l) =>
-        l.medicationId === medication.id &&
-        l.dateKey === todayKey &&
-        l.time === time,
-    ),
+  const asNeededLogs = useMemo(
+    () =>
+      logs
+        .filter((l) => l.medicationId === medication.id && l.dateKey === todayKey && l.status === 'taken')
+        .sort((a, b) => compareTimeHHMM(a.time, b.time)),
+    [logs, medication.id, todayKey],
   );
 
+  const allDone =
+    !isAsNeeded &&
+    timesSorted.every((time) =>
+      logs.some(
+        (l) =>
+          l.medicationId === medication.id &&
+          l.dateKey === todayKey &&
+          l.time === time,
+      ),
+    );
+
   const displayName = formatMedicationLabel(medication);
+
+  const logAsNeeded = () => {
+    const used = logs
+      .filter((l) => l.medicationId === medication.id && l.dateKey === todayKey)
+      .map((l) => l.time);
+    onLog(medication.id, displayName, nextUnusedTimeHHMM(used), 'taken');
+  };
 
   return (
     <div
@@ -53,6 +71,11 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
           <h3 className="font-semibold text-slate-800 dark:text-slate-100 truncate">
             {displayName}
           </h3>
+          {isAsNeeded && (
+            <span className="inline-flex items-center mt-0.5 text-[10px] font-medium bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full">
+              Zo nodig
+            </span>
+          )}
           {courseDayLabel && (
             <span className="inline-flex items-center mt-0.5 text-[10px] font-medium bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 px-2 py-0.5 rounded-full">
               {courseDayLabel}
@@ -65,7 +88,7 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
             </span>
           )}
         </div>
-        {daysLeft !== null && !isLowStock && !isCourse && (
+        {daysLeft !== null && !isLowStock && !isCourse && !isAsNeeded && (
           <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 flex-shrink-0">
             {daysLeft}d voorraad
           </span>
@@ -77,54 +100,80 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
         )}
       </div>
 
-      {/* Time slots */}
-      <div className="px-4 pb-4 space-y-2">
-        {timesSorted.map((time) => {
-          const log = logs.find(
-            (l) =>
-              l.medicationId === medication.id &&
-              l.dateKey === todayKey &&
-              l.time === time,
-          );
-          const logged = !!log;
-          const status = log?.status;
-
-          return (
+      {isAsNeeded ? (
+        <div className="px-4 pb-4 space-y-2">
+          {asNeededLogs.map((log) => (
             <div
-              key={time}
-              className={cn(
-                'flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl',
-                logged
-                  ? status === 'taken'
-                    ? 'bg-emerald-50 dark:bg-emerald-900/20'
-                    : 'bg-slate-50 dark:bg-slate-700/50'
-                  : 'bg-slate-50 dark:bg-slate-700/50',
-              )}
+              key={log.id}
+              className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20"
             >
               <div className="flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-sm font-mono font-medium text-slate-700 dark:text-slate-300">
-                  {time}
+                  {log.time}
                 </span>
-                {status === 'taken' && (
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Ingenomen</span>
-                )}
-                {status === 'skipped' && (
-                  <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">Overgeslagen</span>
-                )}
+                <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Ingenomen</span>
               </div>
-
-              <ScheduleSlotActions
-                medicationId={medication.id}
-                medicationName={displayName}
-                time={time}
-                status={status}
-                onLog={onLog}
-              />
             </div>
-          );
-        })}
-      </div>
+          ))}
+          <button
+            type="button"
+            onClick={logAsNeeded}
+            className="w-full flex items-center justify-center gap-1.5 bg-teal-600 hover:bg-teal-500 active:scale-[0.99] text-white text-sm font-semibold px-3 py-2.5 rounded-xl transition-all"
+          >
+            <Check className="w-4 h-4" />
+            Innemen
+          </button>
+        </div>
+      ) : (
+        <div className="px-4 pb-4 space-y-2">
+          {timesSorted.map((time) => {
+            const log = logs.find(
+              (l) =>
+                l.medicationId === medication.id &&
+                l.dateKey === todayKey &&
+                l.time === time,
+            );
+            const logged = !!log;
+            const status = log?.status;
+
+            return (
+              <div
+                key={time}
+                className={cn(
+                  'flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl',
+                  logged
+                    ? status === 'taken'
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20'
+                      : 'bg-slate-50 dark:bg-slate-700/50'
+                    : 'bg-slate-50 dark:bg-slate-700/50',
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="text-sm font-mono font-medium text-slate-700 dark:text-slate-300">
+                    {time}
+                  </span>
+                  {status === 'taken' && (
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Ingenomen</span>
+                  )}
+                  {status === 'skipped' && (
+                    <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">Overgeslagen</span>
+                  )}
+                </div>
+
+                <ScheduleSlotActions
+                  medicationId={medication.id}
+                  medicationName={displayName}
+                  time={time}
+                  status={status}
+                  onLog={onLog}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

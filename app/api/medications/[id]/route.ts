@@ -52,6 +52,7 @@ export async function PUT(
       stockCount?: number | null;
       courseStartDate?: string | null;
       courseDays?: number | null;
+      asNeeded?: boolean | number | null;
     };
 
     const parsed = parseMedicationInput(body);

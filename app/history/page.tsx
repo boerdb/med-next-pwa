@@ -5,7 +5,7 @@ import { useAppData } from '@/hooks/useAppData';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
 import { toLocalDateKey, parseDateKey } from '@/lib/utils';
-import { getExpectedSlots } from '@/lib/schedule';
+import { getExpectedSlots, isAsNeededMedication } from '@/lib/schedule';
 import { Check, Minus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import type { LogEntry, Medication, HistoryDayGroup, Status } from '@/lib/db/types';
 
@@ -35,13 +35,24 @@ function buildHistoryDays(
       status: dayLogs.find((l) => l.medicationId === row.medicationId && l.time === row.time)?.status,
     }));
 
-    const orphanEntries = dayLogs.filter((l) => !activeMedIds.has(l.medicationId));
-    const takenCount = dayLogs.filter((l) => l.status === 'taken').length;
-    const skippedCount = dayLogs.filter((l) => l.status === 'skipped').length;
+    const asNeededIds = new Set(medications.filter(isAsNeededMedication).map((m) => m.id));
+    const scheduledKeys = new Set(scheduleRows.map((r) => `${r.medicationId}::${r.time}`));
+    const asNeededEntries = dayLogs
+      .filter((l) => asNeededIds.has(l.medicationId) && l.status === 'taken')
+      .sort((a, b) => a.time.localeCompare(b.time));
+
+    const orphanEntries = dayLogs.filter(
+      (l) =>
+        !activeMedIds.has(l.medicationId) ||
+        (!asNeededIds.has(l.medicationId) && !scheduledKeys.has(`${l.medicationId}::${l.time}`)),
+    );
+    const scheduledTakenCount = scheduleRows.filter((r) => r.status === 'taken').length;
+    const skippedCount = scheduleRows.filter((r) => r.status === 'skipped').length;
+    const takenCount = scheduledTakenCount + asNeededEntries.length;
     const expectedCount = scheduleRows.length;
-    const allTaken = expectedCount > 0 && takenCount === expectedCount;
+    const allTaken = expectedCount > 0 && scheduledTakenCount === expectedCount;
     const isComplete =
-      expectedCount > 0 && takenCount + skippedCount >= expectedCount;
+      expectedCount > 0 && scheduledTakenCount + skippedCount >= expectedCount;
 
     if (scheduleRows.length === 0 && dayLogs.length === 0) continue;
 
@@ -63,6 +74,7 @@ function buildHistoryDays(
       takenCount,
       skippedCount,
       expectedCount,
+      asNeededEntries,
       allTaken,
       isComplete,
     });
@@ -155,7 +167,8 @@ function DayRow({
     status: Status,
   ) => void;
 }) {
-  const missedCount = Math.max(0, group.expectedCount - group.takenCount - group.skippedCount);
+  const scheduledTakenCount = group.scheduleRows.filter((r) => r.status === 'taken').length;
+  const missedCount = Math.max(0, group.expectedCount - scheduledTakenCount - group.skippedCount);
   const canCollapse = group.isComplete;
 
   const [expanded, setExpanded] = useState(() => !canCollapse);
@@ -237,6 +250,23 @@ function DayRow({
         </div>
       )}
 
+      {expanded && group.asNeededEntries.length > 0 && (
+        <div className="border-t border-slate-100 dark:border-slate-700 divide-y divide-slate-50 dark:divide-slate-700/50">
+          {group.asNeededEntries.map((e) => (
+            <div key={e.id} className="flex items-center justify-between px-4 py-2.5 gap-3 bg-sky-50/50 dark:bg-sky-900/10">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className="text-xs font-mono text-slate-500 dark:text-slate-400 w-11 shrink-0">{e.time}</span>
+                <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{e.medicationName}</span>
+                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
+                  Zo nodig
+                </span>
+              </div>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">Ingenomen</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {expanded && group.orphanEntries.length > 0 && (
         <div className="border-t border-slate-100 dark:border-slate-700 px-4 py-2">
           <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wide mb-1">Verwijderd medicijn</p>
@@ -285,8 +315,11 @@ export default function HistoryPage() {
   const days = buildHistoryDays(medications, logs);
 
   const totalExpected = days.reduce((s, d) => s + d.expectedCount, 0);
-  const totalTaken = days.reduce((s, d) => s + d.takenCount, 0);
-  const adherencePct = totalExpected > 0 ? Math.round((totalTaken / totalExpected) * 100) : null;
+  const totalScheduledTaken = days.reduce(
+    (s, d) => s + d.scheduleRows.filter((r) => r.status === 'taken').length,
+    0,
+  );
+  const adherencePct = totalExpected > 0 ? Math.round((totalScheduledTaken / totalExpected) * 100) : null;
 
   return (
     <div className="max-w-lg mx-auto px-4 pb-4">

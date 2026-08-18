@@ -1,5 +1,5 @@
 import { normalizeDose, type DoseUnit } from './dose';
-import { normalizeDaysOfWeek, normalizeCourse } from './schedule';
+import { isAsNeededMedication, normalizeDaysOfWeek, normalizeCourse } from './schedule';
 
 /** Local date key (YYYY-MM-DD) using local timezone — avoids UTC midnight shift. */
 export function toLocalDateKey(date: Date = new Date()): string {
@@ -41,6 +41,7 @@ export function normalizeMedication<
     doseUnit?: unknown;
     courseStartDate?: string | null;
     courseDays?: number | null;
+    asNeeded?: boolean | number | null;
   },
 >(
   raw: T,
@@ -51,20 +52,23 @@ export function normalizeMedication<
   doseUnit: DoseUnit | null;
   courseStartDate: string | null;
   courseDays: number | null;
+  asNeeded: boolean;
 } {
   const parsed = Number(raw.stockCount);
   const stockCount =
     Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
   const { doseAmount, doseUnit } = normalizeDose(raw);
-  const course = normalizeCourse(raw);
+  const asNeeded = isAsNeededMedication(raw);
+  const course = asNeeded ? { courseStartDate: null, courseDays: null } : normalizeCourse(raw);
   return {
     ...raw,
     stockCount,
-    daysOfWeek: normalizeDaysOfWeek(raw.daysOfWeek),
+    daysOfWeek: asNeeded ? null : normalizeDaysOfWeek(raw.daysOfWeek),
     doseAmount,
     doseUnit,
     courseStartDate: course.courseStartDate,
     courseDays: course.courseDays,
+    asNeeded,
   };
 }
 
@@ -91,4 +95,28 @@ export function sortMedicationsBySchedule<T extends { times: string[] }>(items: 
   return [...items].sort((a, b) =>
     compareTimeHHMM(earliestMedicationTime(a.times), earliestMedicationTime(b.times)),
   );
+}
+
+export function toLocalTimeHHMM(date: Date = new Date()): string {
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+/** Next unused HH:MM for extra zo-nodig logs on the same day. */
+export function nextUnusedTimeHHMM(used: string[], preferred: string = toLocalTimeHHMM()): string {
+  const occupied = new Set(used);
+  const parts = preferred.split(':').map(Number);
+  let hours = parts[0] ?? 0;
+  let minutes = parts[1] ?? 0;
+  for (let i = 0; i < 24 * 60; i++) {
+    const candidate = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    if (!occupied.has(candidate)) return candidate;
+    minutes += 1;
+    if (minutes >= 60) {
+      minutes = 0;
+      hours = (hours + 1) % 24;
+    }
+  }
+  return preferred;
 }
