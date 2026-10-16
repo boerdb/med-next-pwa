@@ -42,3 +42,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Lokale geheimen voor scripts (MYSQL_ROOT_PASS, MEDTRACKER_DB_PASS, ...)
+scripts/.secrets.local

@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 import paramiko
+from homelab import secret, ssh_connect
 from pathlib import Path
 
 REMOTE = "/var/www/med-next-pwa"
 PORT = "3007"
 PROJECT = Path(__file__).resolve().parent.parent
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect("192.168.1.32", username="root", password="kerkpoort", timeout=30)
+ssh = ssh_connect("192.168.1.32")
 sftp = ssh.open_sftp()
 sftp.put(str(PROJECT / "ecosystem.config.cjs"), f"{REMOTE}/ecosystem.config.cjs")
 sftp.close()
 
-env = f"""DATABASE_URL=mysql://medtracker:kerkpoort@192.168.1.14:3306/medtracker
+env = f"""DATABASE_URL=mysql://medtracker:{secret('MEDTRACKER_DB_PASS')}@192.168.1.14:3306/medtracker
 SESSION_SECRET=placeholder
 NODE_ENV=production
 PORT={PORT}

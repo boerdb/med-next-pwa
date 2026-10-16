@@ -3,16 +3,15 @@ import sys
 from pathlib import Path
 
 import paramiko
+from homelab import mysql_root, ssh_connect
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from deploy_remote import HOST, PASSWORD, REMOTE_DIR, USER, run
+from deploy_remote import HOST, REMOTE_DIR, USER, run
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect("192.168.1.14", username=USER, password=PASSWORD, timeout=30)
+ssh = ssh_connect("192.168.1.14", USER)
 run(
     ssh,
-    "mysql -uroot -pkerkpoort medtracker -e "
+    f"{mysql_root()} medtracker -e "
     "'SELECT name, times FROM medications; "
     "SELECT endpoint_hash, user_id FROM push_subscriptions; "
     "SELECT slot_key, first_sent, second_sent FROM push_reminder_flags ORDER BY slot_key DESC LIMIT 15;'",
@@ -20,8 +19,6 @@ run(
 )
 ssh.close()
 
-ssh2 = paramiko.SSHClient()
-ssh2.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh2.connect(HOST, username=USER, password=PASSWORD, timeout=30)
+ssh2 = ssh_connect(HOST, USER)
 run(ssh2, f"grep -E 'VAPID|TZ' {REMOTE_DIR}/.env.local | sed 's/=.*$/=***/'", check=False)
 ssh2.close()

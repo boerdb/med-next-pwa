@@ -4,13 +4,12 @@ import time
 from pathlib import Path
 
 import paramiko
+from homelab import ssh_connect
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from deploy_remote import HOST, PASSWORD, REMOTE_DIR, USER, run
+from deploy_remote import HOST, REMOTE_DIR, USER, run
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(HOST, username=USER, password=PASSWORD, timeout=30)
+ssh = ssh_connect(HOST, USER)
 run(
     ssh,
     f"cd {REMOTE_DIR} && pm2 delete med-next-pwa 2>/dev/null; "

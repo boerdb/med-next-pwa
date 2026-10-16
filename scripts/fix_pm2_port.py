@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 import paramiko
+from homelab import ssh_connect
 from pathlib import Path
 
 REMOTE = "/var/www/med-next-pwa"
 HOST = "192.168.1.32"
-PW = "kerkpoort"
 PROJECT = Path(__file__).resolve().parent.parent
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(HOST, username="root", password=PW, timeout=30)
+ssh = ssh_connect(HOST)
 sftp = ssh.open_sftp()
 sftp.put(str(PROJECT / "ecosystem.config.cjs"), f"{REMOTE}/ecosystem.config.cjs")
 

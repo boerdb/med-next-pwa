@@ -4,12 +4,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from deploy_remote import HOST, PASSWORD, REMOTE_DIR, USER, run
+from deploy_remote import HOST, REMOTE_DIR, USER, run
 import paramiko
+from homelab import mysql_root, ssh_connect
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(HOST, username=USER, password=PASSWORD, timeout=30)
+ssh = ssh_connect(HOST, USER)
 
 code, _, _ = run(ssh, "node -v", check=False)
 if code != 0:
@@ -27,6 +26,6 @@ run(ssh, "pm2 delete med-next-pwa 2>/dev/null; pm2 delete med-track-pwa 2>/dev/n
 run(ssh, f"cd {REMOTE_DIR} && pm2 start ecosystem.config.cjs && pm2 save")
 run(ssh, "pm2 startup systemd -u root --hp /root 2>/dev/null | grep -v PM2 | bash", check=False)
 run(ssh, "pm2 list", check=False)
-run(ssh, "mysql -uroot -pkerkpoort medtracker -e 'SHOW TABLES;'", check=False)
+run(ssh, f"{mysql_root()} medtracker -e 'SHOW TABLES;'", check=False)
 ssh.close()
 print("Finish deploy OK")

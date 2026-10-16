@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 import paramiko
+from homelab import ssh_connect
 
-ssh = paramiko.SSHClient()
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect("192.168.1.32", username="root", password="kerkpoort", timeout=30)
+ssh = ssh_connect("192.168.1.32")
 _, o, _ = ssh.exec_command(
     "pm2 jlist 2>/dev/null | python3 -c \"import sys,json; "
     "d=json.load(sys.stdin); "

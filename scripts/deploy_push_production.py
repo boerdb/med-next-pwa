@@ -12,12 +12,12 @@ import tempfile
 from pathlib import Path
 
 import paramiko
+from homelab import mysql_root, secret, ssh_connect
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from deploy_remote import (  # noqa: E402
     DB_HOST,
     HOST,
-    PASSWORD,
     PROJECT_ROOT,
     REMOTE_DIR,
     SKIP_DIRS,
@@ -127,12 +127,12 @@ def run_mysql_push_tables(ssh_db: paramiko.SSHClient) -> None:
     sftp.close()
     run(
         ssh_db,
-        "mysql -uroot -pkerkpoort < /tmp/medtracker-push-tables.sql",
+        f"{mysql_root()} < /tmp/medtracker-push-tables.sql",
         check=False,
     )
     run(
         ssh_db,
-        "mysql -uroot -pkerkpoort medtracker -e \"SHOW TABLES LIKE 'push_%';\"",
+        f"{mysql_root()} medtracker -e \"SHOW TABLES LIKE 'push_%';\"",
         check=False,
     )
 
@@ -141,7 +141,7 @@ def merge_env_local(ssh: paramiko.SSHClient) -> None:
     _, out, _ = run(ssh, f"cat {REMOTE_DIR}/.env.local 2>/dev/null || true", check=False)
     env = parse_env(out)
     if not env.get("DATABASE_URL"):
-        env["DATABASE_URL"] = f"mysql://medtracker:kerkpoort@{DB_HOST}:3306/medtracker"
+        env["DATABASE_URL"] = f"mysql://medtracker:{secret('MEDTRACKER_DB_PASS')}@{DB_HOST}:3306/medtracker"
     if not env.get("SESSION_SECRET"):
         env["SESSION_SECRET"] = secrets.token_urlsafe(32)
     env.setdefault("NODE_ENV", "production")
@@ -202,15 +202,11 @@ def build_and_restart(ssh: paramiko.SSHClient) -> None:
 
 
 def main() -> None:
-    ssh_app = paramiko.SSHClient()
-    ssh_app.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     print(f"Connecting app server {USER}@{HOST}...")
-    ssh_app.connect(HOST, username=USER, password=PASSWORD, timeout=30)
+    ssh_app = ssh_connect(HOST, USER)
 
-    ssh_db = paramiko.SSHClient()
-    ssh_db.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     print(f"Connecting DB server {USER}@{DB_SSH_HOST}...")
-    ssh_db.connect(DB_SSH_HOST, username=USER, password=PASSWORD, timeout=30)
+    ssh_db = ssh_connect(DB_SSH_HOST, USER)
 
     upload_project(ssh_app)
     run_mysql_push_tables(ssh_db)

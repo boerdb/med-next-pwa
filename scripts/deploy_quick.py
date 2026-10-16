@@ -7,9 +7,10 @@ import tempfile
 from pathlib import Path
 
 import paramiko
+from homelab import ssh_connect
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from deploy_remote import HOST, PASSWORD, PROJECT_ROOT, REMOTE_DIR, SKIP_DIRS, SKIP_FILES, USER, run
+from deploy_remote import HOST, PROJECT_ROOT, REMOTE_DIR, SKIP_DIRS, SKIP_FILES, USER, run
 
 
 def upload(ssh: paramiko.SSHClient) -> None:
@@ -37,9 +38,7 @@ def upload(ssh: paramiko.SSHClient) -> None:
 
 
 def main() -> None:
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(HOST, username=USER, password=PASSWORD, timeout=30)
+    ssh = ssh_connect(HOST, USER)
     upload(ssh)
     run(ssh, f"cd {REMOTE_DIR} && npm ci", timeout=600)
     run(ssh, f"cd {REMOTE_DIR} && npm run build", timeout=600)
