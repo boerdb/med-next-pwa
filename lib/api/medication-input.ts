@@ -97,7 +97,7 @@ export function parseMedicationInput(body: {
 }
 
 export const MEDICATION_SELECT =
-  'SELECT id, name, dose_amount, dose_unit, times, days_of_week, stock_count, course_start_date, course_days, as_needed FROM medications';
+  'SELECT id, name, dose_amount, dose_unit, times, days_of_week, stock_count, course_start_date, course_days, as_needed, created_date FROM medications';
 
 export const MEDICATION_WRITE_FIELDS =
   'name = ?, dose_amount = ?, dose_unit = ?, times = ?, days_of_week = ?, stock_count = ?, course_start_date = ?, course_days = ?, as_needed = ?';

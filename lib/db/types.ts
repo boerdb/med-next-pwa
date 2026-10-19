@@ -16,6 +16,8 @@ export type Medication = {
   courseDays: number | null;
   /** Zo nodig: geen schema, herinneringen of gemiste doses */
   asNeeded: boolean;
+  /** Datum van toevoegen (YYYY-MM-DD); eerdere dagen tellen niet als gemist. null = onbekend */
+  createdDate: string | null;
 };
 
 export type LogEntry = {

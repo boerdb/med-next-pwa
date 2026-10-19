@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
-import { Check, Clock, AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Check, Clock, AlertTriangle, Loader2 } from 'lucide-react';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
 import { medicationDaysLeft } from '@/lib/stock';
 import { formatMedicationLabel } from '@/lib/dose';
@@ -13,7 +13,12 @@ interface MedicationCardProps {
   medication: Medication;
   todayKey: string;
   logs: LogEntry[];
-  onLog: (medicationId: string, medicationName: string, time: string, status: Status) => void;
+  onLog: (
+    medicationId: string,
+    medicationName: string,
+    time: string,
+    status: Status,
+  ) => Promise<unknown> | void;
 }
 
 export function MedicationCard({ medication, todayKey, logs, onLog }: MedicationCardProps) {
@@ -49,11 +54,19 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
 
   const displayName = formatMedicationLabel(medication);
 
-  const logAsNeeded = () => {
+  const [asNeededBusy, setAsNeededBusy] = useState(false);
+
+  const logAsNeeded = async () => {
+    if (asNeededBusy) return;
     const used = logs
       .filter((l) => l.medicationId === medication.id && l.dateKey === todayKey)
       .map((l) => l.time);
-    onLog(medication.id, displayName, nextUnusedTimeHHMM(used), 'taken');
+    setAsNeededBusy(true);
+    try {
+      await onLog(medication.id, displayName, nextUnusedTimeHHMM(used), 'taken');
+    } finally {
+      setAsNeededBusy(false);
+    }
   };
 
   return (
@@ -118,10 +131,11 @@ export function MedicationCard({ medication, todayKey, logs, onLog }: Medication
           ))}
           <button
             type="button"
-            onClick={logAsNeeded}
-            className="w-full flex items-center justify-center gap-1.5 bg-teal-600 hover:bg-teal-500 active:scale-[0.99] text-white text-sm font-semibold px-3 py-2.5 rounded-xl transition-all"
+            onClick={() => void logAsNeeded()}
+            disabled={asNeededBusy}
+            className="w-full flex items-center justify-center gap-1.5 bg-teal-600 hover:bg-teal-500 active:scale-[0.99] disabled:opacity-60 text-white text-sm font-semibold px-3 py-2.5 rounded-xl transition-all"
           >
-            <Check className="w-4 h-4" />
+            {asNeededBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
             Innemen
           </button>
         </div>

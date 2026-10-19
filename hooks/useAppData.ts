@@ -4,9 +4,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LogEntry, Medication } from '@/lib/db/types';
 import { DATA_REFRESH_EVENT } from '@/lib/db/refresh';
 import { MEDICATIONS_KEY, LOGS_KEY } from '@/lib/reminder-sync';
-import { normalizeMedication } from '@/lib/utils';
+import { normalizeMedication, toLocalDateKey } from '@/lib/utils';
 
 export type AppUser = { id: string; email: string };
+
+/** Hoeveel dagen log-historie de app ophaalt (Geschiedenis toont er 15). */
+const LOG_WINDOW_DAYS = 31;
+
+function logsSinceDateKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - LOG_WINDOW_DAYS);
+  return toLocalDateKey(d);
+}
 
 function mirrorToLocalStorage(medications: Medication[], logs: LogEntry[]) {
   try {
@@ -17,6 +26,10 @@ function mirrorToLocalStorage(medications: Medication[], logs: LogEntry[]) {
   }
 }
 
+/**
+ * Laadt sessie, medicijnen en logs. Wordt één keer gebruikt in AuthProvider;
+ * pagina's lezen de data via useAuth().
+ */
 export function useAppData() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +37,10 @@ export function useAppData() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [user, setUser] = useState<AppUser | null>(null);
 
-  const refresh = useCallback(async () => {
+  const inFlightRef = useRef(false);
+  const rerunRef = useRef(false);
+
+  const load = useCallback(async () => {
     setError(null);
     try {
       const meRes = await fetch('/api/auth/me', { credentials: 'include' });
@@ -39,9 +55,10 @@ export function useAppData() {
         return;
       }
 
+      const since = encodeURIComponent(logsSinceDateKey());
       const [medRes, logRes] = await Promise.all([
         fetch('/api/medications', { credentials: 'include' }),
-        fetch('/api/log-entries', { credentials: 'include' }),
+        fetch(`/api/log-entries?since=${since}`, { credentials: 'include' }),
       ]);
 
       if (!medRes.ok || !logRes.ok) {
@@ -64,20 +81,33 @@ export function useAppData() {
     }
   }, []);
 
-  const refreshRef = useRef(refresh);
-  refreshRef.current = refresh;
+  /** Voegt gelijktijdige verzoeken samen: tijdens een lopende load volgt hooguit één extra. */
+  const refresh = useCallback(async () => {
+    if (inFlightRef.current) {
+      rerunRef.current = true;
+      return;
+    }
+    inFlightRef.current = true;
+    try {
+      do {
+        rerunRef.current = false;
+        await load();
+      } while (rerunRef.current);
+    } finally {
+      inFlightRef.current = false;
+    }
+  }, [load]);
 
   useEffect(() => {
-    void refreshRef.current();
-    const onRefresh = () => void refreshRef.current();
-    const onFocus = () => void refreshRef.current();
+    const onRefresh = () => void refresh();
+    void refresh();
     window.addEventListener(DATA_REFRESH_EVENT, onRefresh);
-    window.addEventListener('focus', onFocus);
+    window.addEventListener('focus', onRefresh);
     return () => {
       window.removeEventListener(DATA_REFRESH_EVENT, onRefresh);
-      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('focus', onRefresh);
     };
-  }, []);
+  }, [refresh]);
 
   return {
     isLoading,

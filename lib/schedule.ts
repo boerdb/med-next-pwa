@@ -142,7 +142,7 @@ export function suggestedCourseStock(courseDays: number, timesCount: number): nu
 }
 
 export function isMedicationDueOnDate(
-  med: { daysOfWeek?: number[] | null } & CourseFields & AsNeededFields,
+  med: { daysOfWeek?: number[] | null; createdDate?: string | null } & CourseFields & AsNeededFields,
   dateKey: string,
 ): boolean {
   if (isAsNeededMedication(med)) return true;
@@ -153,6 +153,9 @@ export function isMedicationDueOnDate(
     }
     return true;
   }
+
+  // Doorlopend: dagen vóór het toevoegen tellen niet mee (kuur heeft eigen startdatum).
+  if (med.createdDate && dateKey < med.createdDate) return false;
 
   const weekday = getWeekdayFromDateKey(dateKey);
   if (weekday === null) return false;

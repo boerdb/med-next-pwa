@@ -25,6 +25,8 @@ type MedRow = RowDataPacket & {
   stock_count: number | null;
   course_start_date: string | null;
   course_days: number | null;
+  as_needed: number;
+  created_date: string | null;
 };
 
 type LogRow = RowDataPacket & {
@@ -57,6 +59,7 @@ async function loadUserReminderData(userId: string): Promise<{
       courseStartDate: med.courseStartDate,
       courseDays: med.courseDays,
       asNeeded: med.asNeeded,
+      createdDate: med.createdDate,
     };
   });
 

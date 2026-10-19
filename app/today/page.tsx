@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
-import { useAppData } from '@/hooks/useAppData';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { signOut } from '@/lib/db/transact';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -34,7 +34,7 @@ async function playTone(durationMs = 130, frequency = 880, volume = 0.12) {
 }
 
 export default function TodayPage() {
-  const { isLoading, error, medications, logs, user } = useAppData();
+  const { isLoading, error, medications, logs, user } = useAuth();
   const { enabled: notifEnabled, pushHint, toggle: toggleNotif } = useNotifications(
     medications,
     logs,

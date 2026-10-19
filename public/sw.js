@@ -138,6 +138,7 @@ function isMedDueOnDate(med, dateKey, weekday) {
     if (dateKey > courseEndDateFrom(med.courseStartDate, med.courseDays)) return false;
     return true;
   }
+  if (med.createdDate && dateKey < med.createdDate) return false;
   const days = med.daysOfWeek;
   if (Array.isArray(days) && days.length > 0 && !days.includes(weekday)) return false;
   return true;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useAppData } from '@/hooks/useAppData';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
 import { toLocalDateKey, parseDateKey } from '@/lib/utils';
@@ -165,7 +165,7 @@ function DayRow({
     medicationName: string,
     time: string,
     status: Status,
-  ) => void;
+  ) => Promise<unknown> | void;
 }) {
   const scheduledTakenCount = group.scheduleRows.filter((r) => r.status === 'taken').length;
   const missedCount = Math.max(0, group.expectedCount - scheduledTakenCount - group.skippedCount);
@@ -286,7 +286,7 @@ function DayRow({
 }
 
 export default function HistoryPage() {
-  const { medications, logs, isLoading, user } = useAppData();
+  const { medications, logs, isLoading, user } = useAuth();
   const { handleLog: logForDate, logError } = useMedicationLog(logs, user?.id);
   const todayKey = toLocalDateKey();
 

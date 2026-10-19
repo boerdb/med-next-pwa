@@ -15,6 +15,7 @@ export type MedicationLite = {
   courseStartDate?: string | null;
   courseDays?: number | null;
   asNeeded?: boolean;
+  createdDate?: string | null;
 };
 export type LogLite = {
   medicationId: string;

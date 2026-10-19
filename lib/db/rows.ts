@@ -13,6 +13,7 @@ type MedicationRow = {
   course_start_date?: string | null;
   course_days?: number | null;
   as_needed?: number | boolean | null;
+  created_date?: string | null;
 };
 
 type LogRow = {
@@ -51,6 +52,7 @@ export function rowToMedication(row: MedicationRow): Medication {
     courseStartDate: row.course_start_date ?? null,
     courseDays: row.course_days ?? null,
     asNeeded: isAsNeededMedication({ asNeeded: row.as_needed }),
+    createdDate: row.created_date ?? null,
   };
 }
 

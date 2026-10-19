@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useAppData } from '@/hooks/useAppData';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { upsertMedication, deleteMedication } from '@/lib/db/transact';
 import { medicationDaysLeft } from '@/lib/stock';
 import { uid } from '@/lib/utils';
 import {
-  Plus, Trash2, Pencil, Check, X, ChevronDown, ChevronUp,
+  Plus, Trash2, Pencil, Check, ChevronDown, ChevronUp,
   Loader2,
 } from 'lucide-react';
 import type { Medication } from '@/lib/db/types';
@@ -228,6 +228,8 @@ function EditMedicationCard({
         ...courseFieldsForSave(kind, courseStartDate, courseDays),
       });
       onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Opslaan mislukt.');
     } finally {
       setBusy(false);
     }
@@ -235,8 +237,16 @@ function EditMedicationCard({
 
   const deleteMed = async () => {
     if (!confirm(`"${formatMedicationLabel(medication)}" verwijderen?`)) return;
-    await deleteMedication(medication.id);
-    onDone();
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteMedication(medication.id);
+      onDone();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Verwijderen mislukt.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -310,7 +320,7 @@ function EditMedicationCard({
         <button type="button" onClick={onDone} className="px-3 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition-colors text-sm">
           Annuleren
         </button>
-        <button type="button" onClick={deleteMed} className="px-3 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-xl transition-colors">
+        <button type="button" onClick={deleteMed} disabled={busy} aria-label="Verwijderen" className="disabled:opacity-50 px-3 py-2 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 rounded-xl transition-colors">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
@@ -403,7 +413,7 @@ function MedicationListCard({
 }
 
 export default function ManagePage() {
-  const { medications, user } = useAppData();
+  const { medications, user } = useAuth();
   const canEdit = Boolean(user?.id);
   const [showAdd, setShowAdd] = useState(false);
 

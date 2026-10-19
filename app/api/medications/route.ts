@@ -9,6 +9,7 @@ import {
   medicationWriteValues,
   parseMedicationInput,
 } from '@/lib/api/medication-input';
+import { APP_TIMEZONE, toDateKeyInTimeZone } from '@/lib/timezone';
 import type { RowDataPacket } from 'mysql2';
 
 type MedRow = RowDataPacket & {
@@ -21,6 +22,8 @@ type MedRow = RowDataPacket & {
   stock_count: number | null;
   course_start_date: string | null;
   course_days: number | null;
+  as_needed: number;
+  created_date: string | null;
 };
 
 export async function GET(req: NextRequest) {
@@ -84,8 +87,8 @@ export async function POST(req: NextRequest) {
       );
     } else {
       await pool.query(
-        'INSERT INTO medications (id, user_id, name, dose_amount, dose_unit, times, days_of_week, stock_count, course_start_date, course_days, as_needed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [id, session.userId, ...values],
+        'INSERT INTO medications (id, user_id, name, dose_amount, dose_unit, times, days_of_week, stock_count, course_start_date, course_days, as_needed, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, session.userId, ...values, toDateKeyInTimeZone(new Date(), APP_TIMEZONE)],
       );
     }
 
