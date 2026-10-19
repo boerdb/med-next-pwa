@@ -3,6 +3,7 @@
 import os
 import secrets
 import stat
+import re
 import sys
 import tarfile
 import tempfile
@@ -34,7 +35,8 @@ def run(
     check: bool = True,
     timeout: int = 600,
 ) -> tuple[int, str, str]:
-    print(f"$ {cmd}")
+    # Wachtwoorden (mysql -p...) niet in de uitvoer tonen.
+    print("$ " + re.sub(r"(-p)('[^']*'|\S+)", r"\1***", cmd))
     _, stdout, stderr = ssh.exec_command(cmd, get_pty=True, timeout=timeout)
     out = stdout.read().decode("utf-8", errors="replace")
     err = stderr.read().decode("utf-8", errors="replace")
