@@ -89,12 +89,12 @@ export function ScheduleSlotActions({
   const other: Status = status === 'taken' ? 'skipped' : 'taken';
 
   return (
-    <div className="basis-full flex flex-wrap gap-2 justify-end">
+    <div className="basis-full grid grid-cols-2 gap-2">
       <button
         type="button"
         onClick={() => void run(() => onLog(medicationId, medicationName, time, other))}
         disabled={busy}
-        className={`${baseBtn} ${
+        className={`${baseBtn} ${onUndo ? '' : 'col-span-2'} ${
           other === 'taken'
             ? 'bg-teal-600 hover:bg-teal-500 text-white'
             : 'bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200'
@@ -118,7 +118,7 @@ export function ScheduleSlotActions({
         type="button"
         onClick={() => setMenuOpen(false)}
         disabled={busy}
-        className={`${baseBtn} text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 font-medium`}
+        className={`${baseBtn} col-span-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 font-medium`}
       >
         Annuleren
       </button>

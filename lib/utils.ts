@@ -26,6 +26,11 @@ export function formatDateKey(dateKey: string): string {
   }).format(date);
 }
 
+/** Alleen de eerste letter als hoofdletter ("maandag 19 oktober" → "Maandag 19 oktober"). */
+export function capitalizeFirst(text: string): string {
+  return text.charAt(0).toLocaleUpperCase('nl-NL') + text.slice(1);
+}
+
 export function uid(): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();

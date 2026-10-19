@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { useMedicationLog } from '@/hooks/useMedicationLog';
 import { ScheduleSlotActions } from '@/components/ScheduleSlotActions';
-import { toLocalDateKey, parseDateKey } from '@/lib/utils';
+import { capitalizeFirst, toLocalDateKey, parseDateKey } from '@/lib/utils';
 import { getExpectedSlots, isAsNeededMedication } from '@/lib/schedule';
 import { Check, Minus, X, ChevronDown, ChevronUp } from 'lucide-react';
 import type { LogEntry, Medication, HistoryDayGroup, Status } from '@/lib/db/types';
@@ -111,9 +111,9 @@ function DayHeaderContent({
     <>
       <div className="flex-1 min-w-0">
         <p
-          className={`text-sm font-semibold capitalize ${isToday ? 'text-teal-700 dark:text-teal-400' : 'text-slate-700 dark:text-slate-200'}`}
+          className={`text-sm font-semibold ${isToday ? 'text-teal-700 dark:text-teal-400' : 'text-slate-700 dark:text-slate-200'}`}
         >
-          {isToday ? `Vandaag — ${group.label}` : group.label}
+          {isToday ? `Vandaag — ${group.label}` : capitalizeFirst(group.label)}
         </p>
         {group.expectedCount > 0 && (
           <AdherenceBar

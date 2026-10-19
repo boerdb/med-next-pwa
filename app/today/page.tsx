@@ -10,7 +10,7 @@ import { DailyProgress } from '@/components/today/DailyProgress';
 import { MedicationCard } from '@/components/today/MedicationCard';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Bell, BellOff, Loader2, LogOut } from 'lucide-react';
-import { sortMedicationsBySchedule, toLocalDateKey, toLocalTimeHHMM } from '@/lib/utils';
+import { capitalizeFirst, sortMedicationsBySchedule, toLocalDateKey, toLocalTimeHHMM } from '@/lib/utils';
 import { getExpectedSlots, isMedicationDueOnDate } from '@/lib/schedule';
 import type { Status } from '@/lib/db/types';
 
@@ -112,8 +112,10 @@ export default function TodayPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Vandaag</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5 capitalize">
-            {new Intl.DateTimeFormat('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }).format(now)}
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {capitalizeFirst(
+              new Intl.DateTimeFormat('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' }).format(now),
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
