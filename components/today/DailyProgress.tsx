@@ -50,7 +50,7 @@ export function DailyProgress({ taken, total }: DailyProgressProps) {
           <span className="text-xl font-bold text-slate-800 dark:text-slate-100 leading-none">
             {taken}
           </span>
-          <span className="text-[10px] text-slate-400 dark:text-slate-500">/{total}</span>
+          <span className="text-xs text-slate-400 dark:text-slate-500">/{total}</span>
         </div>
       </div>
 

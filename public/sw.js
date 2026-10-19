@@ -101,13 +101,13 @@ function bundledReminderTag(dateKey, time, kind) {
 function bundledReminderBody(kind, time, names) {
   const list = formatMedicationList(names);
   if (kind === 'first') {
-    return `${list} — ${time}. Open de app om te registreren.`;
+    return `${list} — ${time}. Tik in de app op Innemen.`;
   }
   return `${list} (${time}): nog niet als ingenomen gemarkeerd. Open de app en tik op Innemen.`;
 }
 
 async function showBundledReminderNotification(kind, dateKey, time, names) {
-  const title = kind === 'first' ? 'Medicijn innemen' : 'Medicijn nog niet ingenomen';
+  const title = kind === 'first' ? 'Medicijn innemen' : 'Nog niet geregistreerd';
   await self.registration.showNotification(title, {
     body: bundledReminderBody(kind, time, names),
     icon: '/icons/icon-192x192.png',
@@ -143,6 +143,8 @@ function isMedDueOnDate(med, dateKey, weekday) {
   if (Array.isArray(days) && days.length > 0 && !days.includes(weekday)) return false;
   return true;
 }
+
+const MAX_REMINDER_DELAY_MS = 2 * 60 * 60_000;
 
 async function checkReminders() {
   try {
@@ -181,6 +183,8 @@ async function checkReminders() {
         const dueMs = new Date(+date.getFullYear(), date.getMonth(), date.getDate(), hh, mm).getTime();
         const sk = `${dateKey}::${med.id}::${time}`;
         const entry = updatedFlags[sk] ?? {};
+        // Geen herinneringen meer voor tijden die al lang voorbij zijn.
+        if (now > dueMs + MAX_REMINDER_DELAY_MS) continue;
 
         if (now >= dueMs + 5 * 60_000 && !entry.second) {
           updatedFlags[sk] = { first: true, second: true };

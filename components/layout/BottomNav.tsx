@@ -40,7 +40,7 @@ export function BottomNav() {
               </div>
               <span
                 className={cn(
-                  'text-[10px] font-medium transition-colors',
+                  'text-xs font-medium transition-colors',
                   active ? 'font-semibold' : '',
                 )}
               >

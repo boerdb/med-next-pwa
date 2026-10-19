@@ -87,7 +87,6 @@ export function MedicationDaysEditor({ daysOfWeek, onChange }: Props) {
           </div>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
             {selected.length}× per week
-            {selected.length === 1 ? '' : ''}
           </p>
         </>
       )}

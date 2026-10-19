@@ -10,7 +10,7 @@ export default function SplashPage() {
   useEffect(() => {
     const t = setTimeout(() => {
       router.replace('/today');
-    }, 900);
+    }, 400);
     return () => clearTimeout(t);
   }, [router]);
 

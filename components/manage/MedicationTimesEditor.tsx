@@ -48,7 +48,7 @@ export function MedicationTimesEditor({
   return (
     <div>
       <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">
-        Innaametijden
+        Innametijden
       </label>
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
         Voeg elke tijd apart toe. Meerdere tijden per dag kan — kies een tijd en tik op{' '}
@@ -74,6 +74,7 @@ export function MedicationTimesEditor({
           <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
             type="time"
+            aria-label="Innametijd"
             value={newTime}
             onChange={(e) => setPending(e.target.value)}
             onKeyDown={(e) => {

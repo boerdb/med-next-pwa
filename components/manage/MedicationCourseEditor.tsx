@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { cn, toLocalDateKey } from '@/lib/utils';
 import { suggestedCourseStock, type MedicationScheduleKind } from '@/lib/schedule';
 
@@ -34,6 +35,8 @@ export function MedicationCourseEditor({
   onCourseDaysChange,
   onSuggestStock,
 }: Props) {
+  const startId = useId();
+  const daysId = useId();
   const isCourse = kind === 'course';
   const suggestedStock = suggestedCourseStock(courseDays, timesCount);
   const stockNum = Number(stockValue);
@@ -76,10 +79,11 @@ export function MedicationCourseEditor({
       {isCourse && (
         <div className="space-y-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl border border-slate-200 dark:border-slate-600">
           <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+            <label htmlFor={startId} className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
               Startdatum
             </label>
             <input
+              id={startId}
               type="date"
               value={courseStartDate}
               onChange={(e) => onStartDateChange(e.target.value)}
@@ -88,7 +92,7 @@ export function MedicationCourseEditor({
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+            <label htmlFor={daysId} className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
               Duur (dagen)
             </label>
             <div className="flex gap-2 flex-wrap">
@@ -108,6 +112,7 @@ export function MedicationCourseEditor({
                 </button>
               ))}
               <input
+                id={daysId}
                 type="number"
                 min={1}
                 max={366}

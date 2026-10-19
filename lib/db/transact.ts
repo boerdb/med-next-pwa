@@ -1,3 +1,4 @@
+import { unsubscribePush } from '@/lib/push/client';
 import { notifyDataChanged } from './refresh';
 import type { LogEntry, Medication } from './types';
 
@@ -52,11 +53,24 @@ export async function upsertLogEntry(
   });
 }
 
+export async function deleteLogEntry(fields: {
+  medicationId: string;
+  dateKey: string;
+  time: string;
+}): Promise<void> {
+  await apiFetch('/api/log-entries', {
+    method: 'DELETE',
+    body: JSON.stringify(fields),
+  });
+}
+
 export async function deleteMedication(id: string): Promise<void> {
   await apiFetch(`/api/medications/${id}`, { method: 'DELETE' });
 }
 
 export async function signOut(): Promise<void> {
+  // Eerst push afmelden (vereist nog een sessie), anders blijven meldingen binnenkomen.
+  await unsubscribePush().catch(() => {});
   await apiFetch('/api/auth/logout', { method: 'POST' });
   notifyDataChanged();
 }

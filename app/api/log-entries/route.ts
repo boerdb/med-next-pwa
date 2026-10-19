@@ -153,3 +153,72 @@ export async function POST(req: NextRequest) {
     return jsonError('Opslaan mislukt.', 500);
   }
 }
+
+/** Registratie van één slot verwijderen (ongedaan maken); voorraad terug als die ingenomen was. */
+export async function DELETE(req: NextRequest) {
+  const session = await requireSession(req);
+  if (session instanceof Response) return session;
+
+  try {
+    const body = (await req.json()) as {
+      medicationId?: string;
+      dateKey?: string;
+      time?: string;
+    };
+    const { medicationId, dateKey, time } = body;
+    if (
+      !medicationId ||
+      !dateKey ||
+      !time ||
+      !DATE_KEY_RE.test(dateKey) ||
+      !TIME_RE.test(time)
+    ) {
+      return jsonError('Ongeldige loggegevens.', 400);
+    }
+
+    const conn = await getPool().getConnection();
+    try {
+      await conn.beginTransaction();
+
+      // Zelfde volgorde van vergrendelen als bij POST.
+      await conn.query(
+        'SELECT id FROM medications WHERE id = ? AND user_id = ? FOR UPDATE',
+        [medicationId, session.userId],
+      );
+      const [slotRows] = await conn.query<RowDataPacket[]>(
+        `SELECT id, status FROM log_entries
+         WHERE user_id = ? AND medication_id = ? AND date_key = ? AND time = ?
+         LIMIT 1 FOR UPDATE`,
+        [session.userId, medicationId, dateKey, time],
+      );
+      if (slotRows.length === 0) {
+        await conn.rollback();
+        return jsonError('Registratie niet gevonden.', 404);
+      }
+
+      await conn.query('DELETE FROM log_entries WHERE id = ? AND user_id = ?', [
+        slotRows[0]!.id,
+        session.userId,
+      ]);
+      if (slotRows[0]!.status === 'taken') {
+        await conn.query(
+          `UPDATE medications SET stock_count = stock_count + 1
+           WHERE id = ? AND user_id = ? AND stock_count IS NOT NULL`,
+          [medicationId, session.userId],
+        );
+      }
+
+      await conn.commit();
+    } catch (err) {
+      await conn.rollback().catch(() => {});
+      throw err;
+    } finally {
+      conn.release();
+    }
+
+    return jsonOk({ ok: true });
+  } catch (e) {
+    console.error('log-entries DELETE', e);
+    return jsonError('Ongedaan maken mislukt.', 500);
+  }
+}

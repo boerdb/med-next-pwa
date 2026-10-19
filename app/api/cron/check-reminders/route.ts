@@ -6,11 +6,13 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim();
-  const querySecret = request.nextUrl.searchParams.get('secret');
+  if (!secret) {
+    return NextResponse.json({ error: 'CRON_SECRET niet ingesteld' }, { status: 503 });
+  }
   const auth = request.headers.get('authorization');
-  const token = auth?.replace(/^Bearer\s+/i, '') ?? querySecret;
+  const token = auth?.replace(/^Bearer\s+/i, '');
 
-  if (secret && token !== secret) {
+  if (token !== secret) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

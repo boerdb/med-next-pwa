@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext } from 'react';
 import { useAppData, type AppUser } from '@/hooks/useAppData';
 import { LoginDialog } from './LoginDialog';
 
@@ -18,34 +18,15 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const auth = useAppData();
   const pathname = usePathname();
-  const [showLogin, setShowLogin] = useState(false);
 
   const isSplash = pathname === '/';
-  const needsAuth = !isSplash && !auth.isLoading && !auth.user;
-
-  useEffect(() => {
-    if (needsAuth) {
-      setShowLogin(true);
-    } else {
-      setShowLogin(false);
-    }
-  }, [needsAuth]);
+  // Offline met gecachte gegevens: geen inlogscherm tonen.
+  const needsAuth = !isSplash && !auth.isLoading && !auth.user && !auth.isOffline;
 
   return (
     <AuthContext.Provider value={auth}>
       {children}
-      {showLogin && (
-        <LoginDialog required onClose={() => setShowLogin(false)} />
-      )}
-      {needsAuth && !showLogin && (
-        <button
-          type="button"
-          onClick={() => setShowLogin(true)}
-          className="fixed bottom-24 left-4 right-4 z-40 max-w-lg mx-auto py-3 px-4 rounded-xl bg-teal-600 text-white text-sm font-semibold shadow-lg"
-        >
-          Aanmelden of account aanmaken
-        </button>
-      )}
+      {needsAuth && <LoginDialog />}
     </AuthContext.Provider>
   );
 }

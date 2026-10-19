@@ -22,7 +22,7 @@ function wallPartsInTimeZone(ts: number, timeZone: string) {
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
+    hourCycle: 'h23',
   }).formatToParts(new Date(ts));
 
   const pick = (type: string) => Number(parts.find((p) => p.type === type)?.value);

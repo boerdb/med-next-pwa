@@ -143,8 +143,14 @@ function DayHeaderContent({
           </span>
         )}
         {group.isComplete && (
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500 text-white">
-            {group.allTaken ? '✓' : 'Onvolledig'}
+          <span
+            className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+              group.allTaken
+                ? 'bg-emerald-600 text-white'
+                : 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300'
+            }`}
+          >
+            {group.allTaken ? 'Alles ingenomen' : 'Deels overgeslagen'}
           </span>
         )}
       </div>
@@ -156,9 +162,11 @@ function DayRow({
   group,
   isToday,
   onLog,
+  onUndo,
 }: {
   group: HistoryDayGroup;
   isToday: boolean;
+  onUndo: (dateKey: string, medicationId: string, time: string) => Promise<unknown> | void;
   onLog: (
     dateKey: string,
     medicationId: string,
@@ -218,7 +226,7 @@ function DayRow({
           {group.scheduleRows.map((row) => (
             <div
               key={row.id}
-              className={`flex items-center justify-between px-4 py-2.5 gap-3 ${
+              className={`flex flex-wrap items-center justify-between px-4 py-2 gap-x-3 gap-y-2 ${
                 row.status === 'taken'
                   ? 'bg-emerald-50/50 dark:bg-emerald-900/10'
                   : row.status === 'skipped'
@@ -244,6 +252,7 @@ function DayRow({
                 onLog={(medId, medName, time, status) =>
                   onLog(group.dateKey, medId, medName, time, status)
                 }
+                onUndo={(medId, time) => onUndo(group.dateKey, medId, time)}
               />
             </div>
           ))}
@@ -257,7 +266,7 @@ function DayRow({
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <span className="text-xs font-mono text-slate-500 dark:text-slate-400 w-11 shrink-0">{e.time}</span>
                 <span className="text-sm text-slate-700 dark:text-slate-300 truncate">{e.medicationName}</span>
-                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
+                <span className="text-xs font-medium px-1.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
                   Zo nodig
                 </span>
               </div>
@@ -269,7 +278,7 @@ function DayRow({
 
       {expanded && group.orphanEntries.length > 0 && (
         <div className="border-t border-slate-100 dark:border-slate-700 px-4 py-2">
-          <p className="text-[10px] text-slate-400 uppercase font-semibold tracking-wide mb-1">Verwijderd medicijn</p>
+          <p className="text-xs text-slate-400 uppercase font-semibold tracking-wide mb-1">Niet (meer) in schema</p>
           {group.orphanEntries.map((e) => (
             <div key={e.id} className="flex items-center gap-2 py-0.5">
               <span className="text-xs font-mono text-slate-400 w-11">{e.time}</span>
@@ -287,7 +296,7 @@ function DayRow({
 
 export default function HistoryPage() {
   const { medications, logs, isLoading, user } = useAuth();
-  const { handleLog: logForDate, logError } = useMedicationLog(logs, user?.id);
+  const { handleLog: logForDate, handleUndo, logError } = useMedicationLog();
   const todayKey = toLocalDateKey();
 
   const handleLog = useCallback(
@@ -375,6 +384,7 @@ export default function HistoryPage() {
               group={group}
               isToday={group.dateKey === todayKey}
               onLog={handleLog}
+              onUndo={handleUndo}
             />
           ))}
         </div>

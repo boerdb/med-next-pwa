@@ -1,5 +1,8 @@
 import { normalizeDose } from '@/lib/dose';
 import { isAsNeededMedication, normalizeCourse, normalizeDaysOfWeek } from '@/lib/schedule';
+import { compareTimeHHMM } from '@/lib/utils';
+
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export type ParsedMedicationInput = {
   name: string;
@@ -24,22 +27,31 @@ export function parseMedicationInput(body: {
   courseDays?: number | null;
   asNeeded?: boolean | number | null;
 }): { ok: true; data: ParsedMedicationInput } | { ok: false; error: string } {
-  const name = body.name?.trim();
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
   const asNeeded = isAsNeededMedication({ asNeeded: body.asNeeded });
-  const times = Array.isArray(body.times) ? body.times : [];
+  const rawTimes = Array.isArray(body.times) ? body.times : [];
 
-  if (!name) {
-    return { ok: false, error: 'Ongeldige medicijngegevens.' };
+  if (!name || name.length > 255) {
+    return { ok: false, error: 'Vul een geldige medicijnnaam in.' };
   }
-  if (!asNeeded && times.length === 0) {
-    return { ok: false, error: 'Ongeldige medicijngegevens.' };
+  if (!rawTimes.every((t) => typeof t === 'string' && TIME_RE.test(t))) {
+    return { ok: false, error: 'Ongeldige innametijd.' };
+  }
+  const times = [...new Set(rawTimes)].sort(compareTimeHHMM);
+  if (!asNeeded && (times.length === 0 || times.length > 24)) {
+    return { ok: false, error: 'Voeg minimaal één innametijd toe.' };
+  }
+
+  let stockCount: number | null = null;
+  if (body.stockCount !== undefined && body.stockCount !== null) {
+    const n = Number(body.stockCount);
+    if (!Number.isFinite(n) || n < 0 || n > 100_000) {
+      return { ok: false, error: 'Ongeldige voorraad.' };
+    }
+    stockCount = Math.floor(n);
   }
 
   if (asNeeded) {
-    const stockCount =
-      body.stockCount !== undefined && body.stockCount !== null
-        ? Math.floor(Number(body.stockCount))
-        : null;
     const { doseAmount, doseUnit } = normalizeDose(body);
     return {
       ok: true,
@@ -74,11 +86,6 @@ export function parseMedicationInput(body: {
   }
 
   const { doseAmount, doseUnit } = normalizeDose(body);
-
-  const stockCount =
-    body.stockCount !== undefined && body.stockCount !== null
-      ? Math.floor(Number(body.stockCount))
-      : null;
 
   return {
     ok: true,

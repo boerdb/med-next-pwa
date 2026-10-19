@@ -1,5 +1,4 @@
 import { averageDosesPerDay, isAsNeededMedication, isCourseMedication } from './schedule';
-import { toLocalDateKey } from './utils';
 
 /** Voorraad in dagen — alleen voor doorlopende medicatie, niet voor kuren. */
 export function medicationDaysLeft(
@@ -11,7 +10,6 @@ export function medicationDaysLeft(
     courseDays?: number | null;
     asNeeded?: boolean;
   },
-  _dateKey: string = toLocalDateKey(),
 ): number | null {
   if (isCourseMedication(med) || isAsNeededMedication(med)) return null;
   if (med.stockCount === null || med.stockCount === undefined) return null;

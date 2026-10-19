@@ -86,9 +86,10 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
 
       {/* Name + dose */}
       <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Naam</label>
+        <label htmlFor="new-med-name" className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">Naam</label>
         <div className="flex gap-2 items-center">
           <input
+            id="new-med-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -118,11 +119,12 @@ function AddMedicationForm({ onDone }: { onDone: () => void }) {
 
       {/* Stock */}
       <div>
-        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+        <label htmlFor="new-med-stock" className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
           Voorraad (optioneel)
         </label>
         <div className="flex gap-2 items-center">
           <input
+            id="new-med-stock"
             type="number"
             min="0"
             value={stock}
@@ -256,6 +258,7 @@ function EditMedicationCard({
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          aria-label="Naam"
           className="flex-1 min-w-0 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 font-semibold dark:text-white"
         />
         <MedicationDoseEditor
@@ -286,6 +289,7 @@ function EditMedicationCard({
           value={stock}
           onChange={(e) => setStock(e.target.value)}
           placeholder="Voorraad"
+          aria-label="Voorraad"
           className="w-28 px-3 py-2 text-sm bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 dark:text-white"
         />
         {[10, 30, 90].map((n) => (
@@ -351,30 +355,32 @@ function MedicationListCard({
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-      <div
-        className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
+      <button
+        type="button"
+        className="w-full text-left flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
       >
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">
+          <span className="block font-semibold text-slate-800 dark:text-slate-100 truncate">
             {formatMedicationLabel(medication)}
-          </p>
+          </span>
           <div className="flex flex-wrap gap-1 mt-1">
             {isAsNeeded ? (
-              <span className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
+              <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
                 Zo nodig
               </span>
             ) : courseLabel ? (
-              <span className={`px-2 py-0.5 text-[11px] font-medium rounded-full ${completed ? 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400' : 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'}`}>
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${completed ? 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-400' : 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300'}`}>
                 {completed ? 'Kuur afgerond' : courseLabel}
               </span>
             ) : (
-              <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[11px] font-medium rounded-full">
+              <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-medium rounded-full">
                 {formatDaysOfWeekLabel(medication.daysOfWeek)}
               </span>
             )}
             {medication.times.map((t) => (
-              <span key={t} className="px-2 py-0.5 bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 text-[11px] font-mono rounded-full">
+              <span key={t} className="px-2 py-0.5 bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 text-xs font-mono rounded-full">
                 {t}
               </span>
             ))}
@@ -391,9 +397,9 @@ function MedicationListCard({
               {medication.stockCount} pillen
             </span>
           )}
-          {expanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          {expanded ? <ChevronUp className="w-5 h-5 text-slate-400" aria-hidden /> : <ChevronDown className="w-5 h-5 text-slate-400" aria-hidden />}
         </div>
-      </div>
+      </button>
       {expanded && (
         <div className="px-4 pb-3 border-t border-slate-100 dark:border-slate-700 pt-3">
           {canEdit ? (
@@ -416,16 +422,20 @@ export default function ManagePage() {
   const { medications, user } = useAuth();
   const canEdit = Boolean(user?.id);
   const [showAdd, setShowAdd] = useState(false);
+  const todayKey = toLocalDateKey();
+  const activeMeds = medications.filter((m) => !isCourseCompleted(m, todayKey));
+  const completedCourses = medications.filter((m) => isCourseCompleted(m, todayKey));
 
   return (
     <div className="max-w-lg mx-auto px-4 pb-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Beheer</h1>
-        {!showAdd && (
+        {!showAdd && canEdit && (
           <button
+            type="button"
             onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-sm transition-colors"
+            className="flex items-center gap-1.5 min-h-11 bg-teal-600 hover:bg-teal-500 text-white text-sm font-semibold px-4 rounded-xl shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" /> Nieuw
           </button>
@@ -438,24 +448,33 @@ export default function ManagePage() {
           <AddMedicationForm onDone={() => setShowAdd(false)} />
         </div>
       )}
-      {showAdd && !canEdit && (
-        <p className="mb-4 text-sm text-amber-600 dark:text-amber-400 px-3 py-2 bg-amber-50 dark:bg-amber-900/30 rounded-xl">
-          Meld je aan om medicijnen toe te voegen.
-        </p>
-      )}
 
       {/* Medication list */}
       {medications.length === 0 && !showAdd ? (
-        <div className="text-center py-16 text-slate-400 dark:text-slate-500">
+        <div className="text-center py-16 text-slate-500 dark:text-slate-400">
           <p className="text-lg font-medium">Geen medicijnen</p>
-          <p className="text-sm mt-1">Klik op &ldquo;Nieuw&rdquo; om er een toe te voegen</p>
+          <p className="text-sm mt-1">Tik op &ldquo;Nieuw&rdquo; om er een toe te voegen</p>
         </div>
       ) : (
-        <div className="space-y-2 mb-6">
-          {medications.map((med) => (
-            <MedicationListCard key={med.id} canEdit={canEdit} medication={med} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-2 mb-6">
+            {activeMeds.map((med) => (
+              <MedicationListCard key={med.id} canEdit={canEdit} medication={med} />
+            ))}
+          </div>
+          {completedCourses.length > 0 && (
+            <section className="mb-6">
+              <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-2">
+                Afgeronde kuren
+              </h2>
+              <div className="space-y-2 opacity-80">
+                {completedCourses.map((med) => (
+                  <MedicationListCard key={med.id} canEdit={canEdit} medication={med} />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
       )}
     </div>
   );

@@ -3,7 +3,10 @@ import { isAsNeededMedication, isMedicationDueOnDate } from './schedule';
 import { formatMedicationLabel } from './dose';
 import type { DoseUnit } from './dose';
 
-export type ReminderFlags = Record<string, { first?: boolean; second?: boolean }>;
+/** Na deze tijd na de innametijd worden geen herinneringen meer gestuurd. */
+export const MAX_REMINDER_DELAY_MS = 2 * 60 * 60 * 1000;
+
+export type ReminderFlags =Record<string, { first?: boolean; second?: boolean }>;
 
 export type MedicationLite = {
   id: string;
@@ -89,6 +92,12 @@ export function runReminderTick(params: {
       const dueMs = parseLocalScheduleMs(dateKey, time, scheduleTimeZone);
       const duePlus5 = dueMs + 5 * 60 * 1000;
       const entry = flags[sk] ?? {};
+
+      // Te laat (bijv. medicijn later op de dag toegevoegd): stil overslaan.
+      if (now > dueMs + MAX_REMINDER_DELAY_MS) {
+        if (!entry.first || !entry.second) flags[sk] = { first: true, second: true };
+        continue;
+      }
 
       // Eerste melding zodra de tijd is (ook als cron/server later pas draait — niet meteen de +5 min-tekst).
       if (now >= dueMs && !entry.first) {

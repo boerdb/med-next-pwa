@@ -17,12 +17,37 @@ function logsSinceDateKey(): string {
   return toLocalDateKey(d);
 }
 
-function mirrorToLocalStorage(medications: Medication[], logs: LogEntry[]) {
+const USER_KEY = 'medtracker:user';
+
+function mirrorToLocalStorage(
+  user: AppUser | null,
+  medications: Medication[],
+  logs: LogEntry[],
+) {
   try {
+    if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
+    else localStorage.removeItem(USER_KEY);
     localStorage.setItem(MEDICATIONS_KEY, JSON.stringify(medications));
     localStorage.setItem(LOGS_KEY, JSON.stringify(logs));
   } catch {
     // ignore quota errors
+  }
+}
+
+/** Laatst opgeslagen gegevens, voor gebruik zonder verbinding. */
+function readCachedData(): {
+  user: AppUser;
+  medications: Medication[];
+  logs: LogEntry[];
+} | null {
+  try {
+    const user = JSON.parse(localStorage.getItem(USER_KEY) ?? 'null') as AppUser | null;
+    if (!user) return null;
+    const medications = JSON.parse(localStorage.getItem(MEDICATIONS_KEY) ?? '[]') as Medication[];
+    const logs = JSON.parse(localStorage.getItem(LOGS_KEY) ?? '[]') as LogEntry[];
+    return { user, medications: medications.map((m) => normalizeMedication(m) as Medication), logs };
+  } catch {
+    return null;
   }
 }
 
@@ -36,14 +61,33 @@ export function useAppData() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [user, setUser] = useState<AppUser | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
 
   const inFlightRef = useRef(false);
   const rerunRef = useRef(false);
 
   const load = useCallback(async () => {
     setError(null);
+    let meRes: Response;
     try {
-      const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+      meRes = await fetch('/api/auth/me', { credentials: 'include' });
+    } catch {
+      // Geen verbinding: toon de laatst opgeslagen gegevens.
+      const cached = readCachedData();
+      if (cached) {
+        setUser(cached.user);
+        setMedications(cached.medications);
+        setLogs(cached.logs);
+        setIsOffline(true);
+        setError('Geen verbinding — je ziet de laatst opgeslagen gegevens.');
+      } else {
+        setError('Geen verbinding. Probeer het later opnieuw.');
+      }
+      setIsLoading(false);
+      return;
+    }
+    setIsOffline(false);
+    try {
       if (!meRes.ok) throw new Error('Kon sessie niet laden.');
       const meData = (await meRes.json()) as { user: AppUser | null };
       setUser(meData.user);
@@ -51,7 +95,7 @@ export function useAppData() {
       if (!meData.user) {
         setMedications([]);
         setLogs([]);
-        mirrorToLocalStorage([], []);
+        mirrorToLocalStorage(null, [], []);
         return;
       }
 
@@ -73,7 +117,7 @@ export function useAppData() {
       );
       setMedications(meds);
       setLogs(logData.logEntries);
-      mirrorToLocalStorage(meds, logData.logEntries);
+      mirrorToLocalStorage(meData.user, meds, logData.logEntries);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Laden mislukt.');
     } finally {
@@ -103,18 +147,27 @@ export function useAppData() {
     void refresh();
     window.addEventListener(DATA_REFRESH_EVENT, onRefresh);
     window.addEventListener('focus', onRefresh);
+    window.addEventListener('online', onRefresh);
     return () => {
+      window.removeEventListener('online', onRefresh);
       window.removeEventListener(DATA_REFRESH_EVENT, onRefresh);
       window.removeEventListener('focus', onRefresh);
     };
   }, [refresh]);
 
+  /** Lokale update vóór de server antwoordt (optimistische UI). */
+  const patchLogs = useCallback((update: (logs: LogEntry[]) => LogEntry[]) => {
+    setLogs(update);
+  }, []);
+
   return {
     isLoading,
+    isOffline,
     error,
     medications,
     logs,
     user,
     refresh,
+    patchLogs,
   };
 }
