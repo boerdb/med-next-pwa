@@ -94,6 +94,7 @@ export function ScheduleSlotActions({
         type="button"
         onClick={() => void run(() => onLog(medicationId, medicationName, time, other))}
         disabled={busy}
+        aria-label={`${medicationName} om ${time} toch ${other === 'taken' ? 'innemen' : 'overslaan'}`}
         className={`${baseBtn} ${onUndo ? '' : 'col-span-2'} ${
           other === 'taken'
             ? 'bg-teal-600 hover:bg-teal-500 text-white'
@@ -101,17 +102,18 @@ export function ScheduleSlotActions({
         }`}
       >
         {other === 'taken' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
-        {other === 'taken' ? 'Toch ingenomen' : 'Toch overgeslagen'}
+        {other === 'taken' ? 'Innemen' : 'Overslaan'}
       </button>
       {onUndo && (
         <button
           type="button"
           onClick={() => void run(() => onUndo(medicationId, time))}
           disabled={busy}
+          aria-label={`Registratie van ${medicationName} om ${time} ongedaan maken`}
           className={`${baseBtn} border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700`}
         >
           <RotateCcw className="w-4 h-4" />
-          Ongedaan maken
+          Ongedaan
         </button>
       )}
       <button
