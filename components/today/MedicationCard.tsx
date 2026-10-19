@@ -18,8 +18,8 @@ interface MedicationCardProps {
   logs: LogEntry[];
   /** Huidige tijd HH:MM (voor "nu", "te laat"). */
   nowHHMM: string;
-  /** Sleutel `medicationId::time` van de eerstvolgende dosis van vandaag. */
-  nextSlotKey: string | null;
+  /** Eerstvolgende innametijd van vandaag (HH:MM) met nog open doses. */
+  nextTime: string | null;
   onLog: (
     medicationId: string,
     medicationName: string,
@@ -38,7 +38,7 @@ export function MedicationCard({
   todayKey,
   logs,
   nowHHMM,
-  nextSlotKey,
+  nextTime,
   onLog,
   onUndo,
 }: MedicationCardProps) {
@@ -188,7 +188,7 @@ export function MedicationCard({
             const minutesPast = minutesBetween(time, nowHHMM);
             const isLate = !status && minutesPast > LATE_AFTER_MIN;
             const isNow = !status && minutesPast >= 0 && !isLate;
-            const isNext = !status && !isNow && !isLate && nextSlotKey === `${medication.id}::${time}`;
+            const isNext = !status && !isNow && !isLate && time === nextTime;
 
             return (
               <div
@@ -204,11 +204,14 @@ export function MedicationCard({
                         : 'bg-slate-50 dark:bg-slate-700/50',
                 )}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Clock className="w-4 h-4 text-slate-400 shrink-0" aria-hidden />
-                  <span className="text-sm font-mono font-semibold text-slate-700 dark:text-slate-200">
-                    {time}
-                  </span>
+                {/* Tijd boven, status/label eronder: houdt de breedte gelijk zodat de knoppen niet verspringen. */}
+                <div className="flex flex-col items-start gap-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-slate-400 shrink-0" aria-hidden />
+                    <span className="text-sm font-mono font-semibold text-slate-700 dark:text-slate-200">
+                      {time}
+                    </span>
+                  </div>
                   {status === 'taken' && (
                     <span className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Ingenomen</span>
                   )}

@@ -74,11 +74,11 @@ export default function TodayPage() {
       l.status === 'taken' &&
       expectedSlots.some((s) => s.medicationId === l.medicationId && s.time === l.time),
   ).length;
-  // Eerstvolgende dosis die nog moet komen (slots zijn al op tijd gesorteerd).
+  // Eerstvolgende tijd met open doses; alle doses op die tijd krijgen "Volgende".
   const nextSlot = expectedSlots.find(
     (s) => s.time > nowHHMM && !loggedSlotKeys.has(`${s.medicationId}::${s.time}`),
   );
-  const nextSlotKey = nextSlot ? `${nextSlot.medicationId}::${nextSlot.time}` : null;
+  const nextTime = nextSlot?.time ?? null;
 
   const handleLog = useCallback(
     async (medicationId: string, medicationName: string, time: string, status: Status) => {
@@ -192,7 +192,7 @@ export default function TodayPage() {
               todayKey={todayKey}
               logs={todayLogs}
               nowHHMM={nowHHMM}
-              nextSlotKey={nextSlotKey}
+              nextTime={nextTime}
               onLog={handleLog}
               onUndo={handleUndoToday}
             />
