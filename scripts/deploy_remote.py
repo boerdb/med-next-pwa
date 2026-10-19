@@ -36,7 +36,7 @@ def run(
     timeout: int = 600,
 ) -> tuple[int, str, str]:
     # Wachtwoorden (mysql -p...) niet in de uitvoer tonen.
-    print("$ " + re.sub(r"(-p)('[^']*'|\S+)", r"\1***", cmd))
+    print("$ " + re.sub(r"(?<!\S)(-p)('[^']*'|\S+)", r"\1***", cmd))
     _, stdout, stderr = ssh.exec_command(cmd, get_pty=True, timeout=timeout)
     out = stdout.read().decode("utf-8", errors="replace")
     err = stderr.read().decode("utf-8", errors="replace")
