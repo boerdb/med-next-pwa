@@ -12,11 +12,11 @@ from pathlib import Path
 import paramiko
 from homelab import mysql_root, secret, ssh_connect
 
-HOST = os.environ.get("DEPLOY_HOST", "192.168.1.32")
+HOST = os.environ.get("DEPLOY_HOST", "85.10.144.42")
 USER = os.environ.get("DEPLOY_USER", "root")
 REMOTE_DIR = os.environ.get("DEPLOY_DIR", "/var/www/med-next-pwa")
-# MySQL on DB-server (192.168.1.14)
-DB_HOST = os.environ.get("DB_HOST", "192.168.1.14")
+# MariaDB op de VPS zelf
+DB_HOST = os.environ.get("DB_HOST", "127.0.0.1")
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 SKIP_DIRS = {
