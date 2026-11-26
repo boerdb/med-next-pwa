@@ -6,6 +6,9 @@ import type { DoseUnit } from './dose';
 /** Na deze tijd na de innametijd worden geen herinneringen meer gestuurd. */
 export const MAX_REMINDER_DELAY_MS = 2 * 60 * 60 * 1000;
 
+/** Zoveel tijd na de innametijd volgt de tweede herinnering (als de dosis nog niet is geregistreerd). */
+export const SECOND_REMINDER_DELAY_MS = 15 * 60 * 1000;
+
 export type ReminderFlags =Record<string, { first?: boolean; second?: boolean }>;
 
 export type MedicationLite = {
@@ -90,7 +93,7 @@ export function runReminderTick(params: {
 
       const sk = slotKey(dateKey, med.id, time);
       const dueMs = parseLocalScheduleMs(dateKey, time, scheduleTimeZone);
-      const duePlus5 = dueMs + 5 * 60 * 1000;
+      const dueSecond = dueMs + SECOND_REMINDER_DELAY_MS;
       const entry = flags[sk] ?? {};
 
       // Te laat (bijv. medicijn later op de dag toegevoegd): stil overslaan.
@@ -99,7 +102,7 @@ export function runReminderTick(params: {
         continue;
       }
 
-      // Eerste melding zodra de tijd is (ook als cron/server later pas draait — niet meteen de +5 min-tekst).
+      // Eerste melding zodra de tijd is (ook als cron/server later pas draait — niet meteen de tekst van de tweede melding).
       if (now >= dueMs && !entry.first) {
         flags[sk] = { ...entry, first: true };
         events.push({
@@ -111,8 +114,8 @@ export function runReminderTick(params: {
         continue;
       }
 
-      // Tweede melding alleen ≥5 min na inname-tijd én ná de eerste push.
-      if (now >= duePlus5 && entry.first && !entry.second) {
+      // Tweede melding alleen ≥15 min na inname-tijd én ná de eerste push.
+      if (now >= dueSecond && entry.first && !entry.second) {
         flags[sk] = { ...entry, first: true, second: true };
         events.push({
           kind: 'second',

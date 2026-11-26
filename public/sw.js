@@ -145,6 +145,8 @@ function isMedDueOnDate(med, dateKey, weekday) {
 }
 
 const MAX_REMINDER_DELAY_MS = 2 * 60 * 60_000;
+/** Tweede herinnering 15 min na de innametijd (gelijk aan lib/reminder-logic.ts). */
+const SECOND_REMINDER_DELAY_MS = 15 * 60_000;
 
 async function checkReminders() {
   try {
@@ -186,12 +188,12 @@ async function checkReminders() {
         // Geen herinneringen meer voor tijden die al lang voorbij zijn.
         if (now > dueMs + MAX_REMINDER_DELAY_MS) continue;
 
-        if (now >= dueMs + 5 * 60_000 && !entry.second) {
+        if (now >= dueMs + SECOND_REMINDER_DELAY_MS && !entry.second) {
           updatedFlags[sk] = { first: true, second: true };
           const names = pendingSecond.get(time) ?? [];
           names.push(formatMedLabel(med));
           pendingSecond.set(time, names);
-        } else if (now >= dueMs && now < dueMs + 5 * 60_000 && !entry.first) {
+        } else if (now >= dueMs && now < dueMs + SECOND_REMINDER_DELAY_MS && !entry.first) {
           updatedFlags[sk] = { ...entry, first: true };
           const names = pendingFirst.get(time) ?? [];
           names.push(formatMedLabel(med));
